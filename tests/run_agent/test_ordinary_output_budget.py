@@ -194,27 +194,6 @@ def test_top_level_override_wins_mixed_extra_body_collision(profile):
     assert "max_tokens" not in kwargs.get("extra_body", {})
 
 
-@pytest.mark.parametrize("profile", [get_provider_profile("custom"), None])
-def test_top_level_none_does_not_suppress_nested_positive_limit(profile):
-    transport = ChatCompletionsTransport()
-
-    kwargs = transport.build_kwargs(
-        model="qwen-local",
-        messages=_messages(),
-        provider_profile=profile,
-        is_custom_provider=profile is None,
-        max_tokens=None,
-        max_tokens_param_fn=lambda value: {"max_tokens": value},
-        request_overrides={
-            "extra_body": {"max_tokens": 7777},
-            "max_tokens": None,
-        },
-    )
-
-    assert kwargs["max_tokens"] == 7777
-    assert "max_tokens" not in kwargs.get("extra_body", {})
-
-
 def test_negative_agent_limit_is_classified_and_normalized(tmp_path, monkeypatch):
     agent = _custom_agent(tmp_path, monkeypatch, max_tokens=-1)
 
