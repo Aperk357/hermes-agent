@@ -87,7 +87,7 @@ def _finalize_ordinary_output_limit(
     explicit_top_level_value: int | None = None
     if isinstance(request_overrides, dict):
         for key, value in request_overrides.items():
-            if key in _OUTPUT_TOKEN_KEYS:
+            if key in _OUTPUT_TOKEN_KEYS and value is not None:
                 explicit_top_level_present = True
                 explicit_top_level_value = value
 
