@@ -304,6 +304,23 @@ describe('useModelControls', () => {
     expect(queryClient.getQueryData(modelOptionsQueryKey('default'))).toBeUndefined()
   })
 
+  it('switches a live NVIDIA session to the configured local Qwen provider', async () => {
+    const requestGateway = vi.fn().mockResolvedValue({})
+    const queryClient = new QueryClient()
+    $activeSessionId.set('session-nvidia')
+
+    const { result } = renderHook(() => useModelControls({ queryClient, requestGateway }))
+    await expect(
+      result.current.selectModel({ model: 'qwen3.6:ctx65k', provider: 'local-qwen' })
+    ).resolves.toBe(true)
+
+    expect(requestGateway).toHaveBeenCalledWith('config.set', {
+      session_id: 'session-nvidia',
+      key: 'model',
+      value: 'qwen3.6:ctx65k --provider local-qwen --session'
+    })
+  })
+
   it('seeds an empty composer model from global but never clobbers a pick', async () => {
     vi.mocked(getGlobalModelInfo).mockResolvedValue({ model: 'openai/gpt-5.5', provider: 'openai-codex' })
 

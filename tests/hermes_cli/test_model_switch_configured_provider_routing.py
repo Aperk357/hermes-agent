@@ -103,6 +103,28 @@ def test_typed_configured_model_routes_away_from_openai_codex():
     assert result.new_model == "qwen3.5-4b"
 
 
+def test_nvidia_session_can_switch_to_configured_local_qwen_provider():
+    user_providers = {
+        "local-qwen": {
+            "name": "Local Qwen 3.6",
+            "base_url": "http://127.0.0.1:11435/v1",
+            "transport": "openai_chat",
+            "models": ["qwen3.6:ctx65k"],
+        }
+    }
+    result = _run_switch(
+        raw_input="qwen3.6:ctx65k",
+        current_provider="nvidia",
+        current_model="pdv/nvidia-smart-router",
+        user_providers=user_providers,
+        current_base_url="http://127.0.0.1:11436/v1",
+    )
+    assert result.success is True, result.error_message
+    assert result.provider_changed is True
+    assert result.target_provider == "local-qwen"
+    assert result.new_model == "qwen3.6:ctx65k"
+
+
 def test_typed_configured_model_routes_to_custom_provider():
     """``custom_providers`` entries route to their ``custom:<name>`` slug."""
     custom_providers = [

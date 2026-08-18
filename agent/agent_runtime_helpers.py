@@ -2124,6 +2124,7 @@ def switch_model(agent, new_model, new_provider, api_key='', base_url='', api_mo
             "_anthropic_base_url",
             "_is_anthropic_oauth",
             "_config_context_length",
+            "_api_max_retries",
         )
     }
     # _client_kwargs is a dict — snapshot a shallow copy so mutating the
@@ -2381,6 +2382,26 @@ def switch_model(agent, new_model, new_provider, api_key='', base_url='', api_mo
         )
     except Exception as _reasoning_err:
         logger.debug("switch_model: could not re-resolve reasoning_config: %s", _reasoning_err)
+
+    # A live model switch is also the safe policy-refresh boundary for legacy
+    # sessions. Old cached agents may predate a reduced retry budget; retaining
+    # that construction-time value recreates the post-outage retry burst even
+    # after the selected provider has moved behind the governed proxy.
+    try:
+        from hermes_cli.config import load_config as _retry_load_config
+
+        _retry_cfg = _retry_load_config() or {}
+        _retry_agent = _retry_cfg.get("agent", {})
+        _retry_raw = (
+            _retry_agent.get("api_max_retries", 3)
+            if isinstance(_retry_agent, dict)
+            else 3
+        )
+        agent._api_max_retries = max(1, int(_retry_raw))
+    except (TypeError, ValueError):
+        agent._api_max_retries = 3
+    except Exception as _retry_err:
+        logger.debug("switch_model: could not refresh retry policy: %s", _retry_err)
 
     # ── Invalidate cached system prompt so it rebuilds next turn ──
     agent._cached_system_prompt = None

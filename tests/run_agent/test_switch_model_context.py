@@ -184,6 +184,25 @@ def test_switch_model_without_config_context_length():
         assert call_kwargs.get("config_context_length") is None
 
 
+def test_switch_model_refreshes_legacy_retry_policy():
+    """A hot-switched legacy session adopts the current bounded retry budget."""
+    agent = _make_agent_with_compressor(config_context_length=None)
+    agent._api_max_retries = 3
+
+    with (
+        patch("hermes_cli.config.load_config", return_value={"agent": {"api_max_retries": 1}}),
+        patch("agent.model_metadata.get_model_context_length", return_value=128_000),
+    ):
+        agent.switch_model(
+            "z-ai/glm-5.2",
+            "nvidia",
+            api_key="local-proxy-placeholder",
+            base_url="http://127.0.0.1:11436/v1",
+        )
+
+    assert agent._api_max_retries == 1
+
+
 def test_direct_start_model_override_does_not_inherit_profile_context_length():
     """A CLI ``--model`` startup override must not inherit another model's window."""
     cfg = {
