@@ -7815,6 +7815,22 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin, CLIBillingMixin):
                 self._session_db.end_session(old_session_id, "new_session")
             except Exception:
                 pass
+            # Opt-in route-lease teardown (default OFF; mirrors the
+            # gateway-side _release_route_lease). Best-effort: CLI sessions
+            # use CLI's own session_id, not the gateway's session_key
+            # namespace, so this only releases a lease that CLI-side
+            # allocation (if any is ever wired) created under this same id.
+            if os.getenv("HERMES_ROUTE_LEASE_ENABLED", "").lower() in {"true", "1", "yes"}:
+                try:
+                    from agent.route_lease_manager import (
+                        get_route_lease_manager,
+                        LeaseReleaseReason,
+                    )
+                    get_route_lease_manager().release_lease(
+                        old_session_id, LeaseReleaseReason.SESSION_RESET
+                    )
+                except Exception:
+                    logger.debug("Route-lease: CLI teardown raised, ignoring", exc_info=True)
             # Don't let immediately-rotated empty sessions pile up in
             # /resume and `hermes sessions list` (gemini-cli#27770 port).
             self._discard_session_if_empty(old_session_id)

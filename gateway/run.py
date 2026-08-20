@@ -2296,6 +2296,124 @@ _CONVERSATION_SCOPED_STATE: tuple = (
 # Sentinel for "caller did not pass metadata" vs "caller passed None".
 _UNSET = object()
 
+# ── Route-lease adapter (experimental, opt-in, OFF by default) ─────────────
+#
+# Strictly additive: when HERMES_ROUTE_LEASE_ENABLED is unset/false (the
+# default), _maybe_apply_route_lease() is a no-op and
+# _resolve_session_agent_runtime()/_resolve_runtime_agent_kwargs() behave
+# byte-for-byte as before this feature existed. See
+# agent/route_lease_manager.py (copied verbatim, unmodified) and
+# agent/hermes_route_adapter.py (new adapter code, with documented
+# placeholder fields) for the underlying implementation and its honest
+# limitations.
+_ROUTE_LEASE_ENABLED_ENV = "HERMES_ROUTE_LEASE_ENABLED"
+_route_lease_manager_singleton = None  # lazily constructed, only when the flag is on
+
+
+def _route_lease_enabled() -> bool:
+    return os.getenv(_ROUTE_LEASE_ENABLED_ENV, "").lower() in {"true", "1", "yes"}
+
+
+def _get_route_lease_manager():
+    """Lazily construct the RouteLeaseManager + HermesRouteAdapter singleton.
+
+    Only invoked when _route_lease_enabled() is True, so importing
+    pdv-provider-routing / constructing a HermesProviderIntegration never
+    happens on the default (flag-off) path.
+    """
+    global _route_lease_manager_singleton
+    if _route_lease_manager_singleton is not None:
+        return _route_lease_manager_singleton
+    from agent.route_lease_manager import RouteLeaseManager
+    from agent.hermes_route_adapter import HermesGovernedRouterAdapter
+
+    router = None
+    try:
+        # Optional dependency: pdv-provider-routing may not be importable
+        # from every Hermes deployment layout. If it isn't, fall back to
+        # RouteLeaseManager's own MockRouter default (still opt-in only,
+        # never reached unless the flag is explicitly on) rather than
+        # crashing the caller. HermesGovernedRouterAdapter.__init__ handles
+        # the sys.path wiring to pdv-provider-routing itself.
+        router = HermesGovernedRouterAdapter()
+    except Exception:
+        logger.warning(
+            "Route-lease flag is on but the governed router "
+            "(pdv-provider-routing) could not be constructed; falling back "
+            "to RouteLeaseManager's built-in MockRouter.",
+            exc_info=True,
+        )
+        router = None
+
+    _route_lease_manager_singleton = RouteLeaseManager(router=router)
+    return _route_lease_manager_singleton
+
+
+def _maybe_apply_route_lease(session_key: Optional[str], runtime_kwargs: dict) -> dict:
+    """Opt-in: allocate a route lease for ``session_key`` and, on success,
+    layer its provider/model onto ``runtime_kwargs``.
+
+    No-op (returns ``runtime_kwargs`` unchanged) unless
+    HERMES_ROUTE_LEASE_ENABLED is set AND a session_key is available.
+    """
+    if not _route_lease_enabled() or not session_key:
+        return runtime_kwargs
+    try:
+        import asyncio
+
+        manager = _get_route_lease_manager()
+        result = asyncio.get_event_loop().run_until_complete(
+            manager.allocate_lease(session_id=session_key)
+        ) if not asyncio.get_event_loop().is_running() else None
+        # NOTE: _resolve_session_agent_runtime is a synchronous method
+        # called from both sync and async contexts in this codebase; when
+        # already inside a running loop we cannot safely block here, so we
+        # skip allocation this turn rather than risk a deadlock or a
+        # nested-loop crash. This is a known, documented limitation (see
+        # final report) — a real integration should make the call sites
+        # async instead of bridging sync/async at this seam.
+        if result is None:
+            logger.debug(
+                "Route-lease: skipping allocation for session=%s — already "
+                "inside a running event loop (sync/async bridge limitation)",
+                session_key,
+            )
+            return runtime_kwargs
+        if result.success and result.lease:
+            runtime_kwargs = dict(runtime_kwargs)
+            runtime_kwargs["provider"] = result.lease.provider
+            runtime_kwargs["model"] = result.lease.model_id
+            runtime_kwargs["route_lease_route_id"] = result.lease.route_id
+            logger.info(
+                "Route-lease: allocated %s/%s (route=%s, reason=%s) for session=%s",
+                result.lease.provider, result.lease.model_id, result.lease.route_id,
+                result.reason, session_key,
+            )
+        else:
+            logger.info(
+                "Route-lease: allocation failed for session=%s (%s)",
+                session_key, result.error or result.reason,
+            )
+    except Exception:
+        logger.warning("Route-lease: allocation raised, ignoring", exc_info=True)
+    return runtime_kwargs
+
+
+def _release_route_lease(session_key: Optional[str]) -> None:
+    """Opt-in teardown counterpart to _maybe_apply_route_lease(). No-op when
+    the flag is off, session_key is empty, or no manager was ever built
+    (i.e. allocation never ran for this process)."""
+    if not _route_lease_enabled() or not session_key:
+        return
+    if _route_lease_manager_singleton is None:
+        return
+    try:
+        from agent.route_lease_manager import LeaseReleaseReason
+
+        _route_lease_manager_singleton.release_lease(session_key, LeaseReleaseReason.SESSION_CLOSE)
+    except Exception:
+        logger.debug("Route-lease: release raised, ignoring", exc_info=True)
+
 
 def _resolve_runtime_agent_kwargs() -> dict:
     """Resolve provider credentials for gateway-created AIAgent instances.
@@ -4483,6 +4601,11 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             )
 
         runtime_kwargs = _resolve_runtime_agent_kwargs()
+        # Opt-in route-lease overlay (default OFF — see _maybe_apply_route_lease).
+        # Uses the same resolved_session_key already derived above for
+        # session-model-override lookup, per KNOWN RISK 1 in the task brief:
+        # no new session-identifier namespace is introduced here.
+        runtime_kwargs = _maybe_apply_route_lease(resolved_session_key, runtime_kwargs)
         runtime_model = runtime_kwargs.pop("model", None)
         if runtime_model:
             logger.info(
@@ -19055,6 +19178,13 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         self._running_agents_ts.pop(session_key, None)
         if hasattr(self, "_busy_ack_ts"):
             self._busy_ack_ts.pop(session_key, None)
+        # NOTE: route-lease teardown intentionally does NOT happen here.
+        # This method runs at every turn end (see docstring above), but a
+        # route lease is a per-SESSION resource meant to persist across
+        # turns within the same conversation — releasing it here would
+        # reallocate (and likely rotate providers) on every single message.
+        # Release happens at the conversation-boundary funnel instead; see
+        # _clear_conversation_scope() below.
         # Turn boundary: a running-agent slot was just released.  Persist the
         # new (lower) in-flight count so the dashboard readout stays current
         # between lifecycle transitions.  Preserves gateway_state (see
@@ -19156,6 +19286,13 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             if isinstance(store, dict):
                 store.pop(session_key, None)
         self._clear_session_boundary_security_state(session_key)
+        # Opt-in route-lease teardown (default OFF; no-op unless
+        # HERMES_ROUTE_LEASE_ENABLED is set and allocation actually ran for
+        # this session_key — see _maybe_apply_route_lease/_release_route_lease).
+        # This IS the conversation-boundary funnel (/new, /resume, auto-reset,
+        # expiry), so it's the correct place to release a per-session lease —
+        # unlike per-turn teardown, which must NOT release it.
+        _release_route_lease(session_key)
         logger.debug(
             "Cleared conversation scope for %s (%s)", session_key, reason
         )
