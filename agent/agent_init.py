@@ -1042,6 +1042,29 @@ def init_agent(
         agent._fallback_chain = [fallback_model]
     else:
         agent._fallback_chain = []
+    # Cross-session capacity advisory: reorder BACKUP candidates only, never
+    # touch primary selection or the failover mechanism itself. See
+    # agent/route_capacity_advisor.py and Nightwatch NW-CHK-0009/0010 for the
+    # reconciliation this implements. Exception-safe by construction on both
+    # sides (the advisor's own methods and this call site) — any failure
+    # here must leave agent._fallback_chain exactly as config built it.
+    #
+    # Opt-in, default OFF: HERMES_ROUTE_CAPACITY_ADVISOR_ENABLED=1. A process-
+    # wide advisor changing an already-configured fallback order is a real
+    # behavior change for existing users and existing tests that assume
+    # `_fallback_chain` stays exactly as `fallback_model`/`fallback_providers`
+    # specified it — confirmed by a full-suite regression run that caught
+    # `tests/run_agent/test_provider_fallback.py` breaking under the
+    # unconditional version of this change (unrelated tests in the same
+    # process accumulate advisor state with no reset boundary between them).
+    # Default-off makes this a strictly additive capability until someone
+    # deliberately turns it on, rather than a silent behavior change.
+    if len(agent._fallback_chain) > 1 and os.environ.get("HERMES_ROUTE_CAPACITY_ADVISOR_ENABLED") == "1":
+        try:
+            from agent.route_capacity_advisor import get_route_capacity_advisor
+            agent._fallback_chain = get_route_capacity_advisor().advise_order(agent._fallback_chain)
+        except Exception:
+            pass
     agent._fallback_index = 0
     agent._fallback_activated = getattr(agent, "_fallback_activated", False)
     # Legacy attribute kept for backward compat (tests, external callers)
@@ -1130,6 +1153,20 @@ def init_agent(
         timestamp_str = agent.session_start.strftime("%Y%m%d_%H%M%S")
         short_uuid = uuid.uuid4().hex[:6]
         agent.session_id = f"{timestamp_str}_{short_uuid}"
+
+    # Register this session's chosen backup head so a later session's
+    # advisory reorder (above) can see it. Best-effort only — see
+    # agent/route_capacity_advisor.py's TTL-based self-expiry; a failure or
+    # omission here degrades to "no advisory signal from this session," never
+    # to a broken agent. Same opt-in gate as the advisory read above — no
+    # point registering state nothing will ever consult.
+    if agent._fallback_chain and os.environ.get("HERMES_ROUTE_CAPACITY_ADVISOR_ENABLED") == "1":
+        try:
+            from agent.route_capacity_advisor import get_route_capacity_advisor
+            head = agent._fallback_chain[0]
+            get_route_capacity_advisor().record_assignment(agent.session_id, head.get("provider", ""), head.get("model", ""))
+        except Exception:
+            pass
 
     # Expose session ID to tools (terminal, execute_code) so agents can
     # reference their own session for --resume commands, cross-session
