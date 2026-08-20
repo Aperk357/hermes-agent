@@ -1,0 +1,67 @@
+{
+  "total": 12,
+  "passed": 11,
+  "failed": 1,
+  "tests": [
+    {
+      "name": "1_simultaneous_different_routes",
+      "passed": true,
+      "detail": "Tab1=local/qwen3.6:ctx65k, Tab2=nvidia/nemotron"
+    },
+    {
+      "name": "2_distribute_five_tabs",
+      "passed": true,
+      "detail": "5 sessions across 4 routes: {'local/qwen3.6:ctx65k': ['distr-tab-1', 'distr-tab-5'], 'nvidia/nemotron': ['distr-tab-2'], 'free/minimax': ['distr-tab-3'], 'nvidia/laguna': ['distr-tab-4']}"
+    },
+    {
+      "name": "3_capability_exclusion",
+      "passed": true,
+      "detail": "vision request -> nvidia/laguna (cap=vision)"
+    },
+    {
+      "name": "4_rotation_while_others_continue",
+      "passed": true,
+      "detail": "rot-1: qwen3.6:ctx65k\u2192laguna, others_alive=True"
+    },
+    {
+      "name": "5_exact_pin_fails_closed",
+      "passed": true,
+      "detail": "exact pin qwen3.6 (cooled): success=False, reason=no_compatible_route"
+    },
+    {
+      "name": "6_manual_nvidia_qwen_nvidia_switch",
+      "passed": true,
+      "detail": "start=qwen3.6:ctx65k, after_qwen=qwen3.6:ctx65k, after_nvidia=qwen3.6:ctx65k, checkpoint=True"
+    },
+    {
+      "name": "7_checkpoint_survives_rotation",
+      "passed": true,
+      "detail": "checkpoint before=ckpt-abc123, after=ckpt-abc123"
+    },
+    {
+      "name": "8_no_duplicate_execution",
+      "passed": true,
+      "detail": "old_route=qwen-local-001, new_route=nemotron-001, released=False, no_dup=True"
+    },
+    {
+      "name": "9_lease_release_on_close",
+      "passed": true,
+      "detail": "before=1, after=0, released=True"
+    },
+    {
+      "name": "10_cooled_route_not_reallocated",
+      "passed": true,
+      "detail": "all_cooled -> success=True, model=qwen3.6:ctx65k, reason=local_fallback"
+    },
+    {
+      "name": "11_paid_fallback_disabled",
+      "passed": true,
+      "detail": "all_free_cooled -> paid_auto=False, model=qwen3.6:ctx65k"
+    },
+    {
+      "name": "12_existing_tests_structural",
+      "passed": false,
+      "detail": "Structural check error: 'charmap' codec can't decode byte 0x8f in position 83887: character maps to <undefined>"
+    }
+  ]
+}
