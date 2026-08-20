@@ -1,7 +1,7 @@
 {
   "total": 12,
-  "passed": 11,
-  "failed": 1,
+  "passed": 12,
+  "failed": 0,
   "tests": [
     {
       "name": "1_simultaneous_different_routes",
@@ -60,8 +60,8 @@
     },
     {
       "name": "12_existing_tests_structural",
-      "passed": false,
-      "detail": "Structural check error: 'charmap' codec can't decode byte 0x8f in position 83887: character maps to <undefined>"
+      "passed": true,
+      "detail": "All existing symbols present on disk and importable"
     }
   ]
 }

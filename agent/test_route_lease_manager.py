@@ -432,7 +432,7 @@ async def test_12_existing_tests_structural():
         # Check that ACP adapter has the model switch handler
         server_file = hermes_root / "acp_adapter" / "server.py"
         if server_file.exists():
-            content = server_file.read_text()
+            content = server_file.read_text(encoding="utf-8")
             has_switch = "_resolve_model_selection" in content
             has_model_config = "model_config" in content
         else:
@@ -454,7 +454,7 @@ async def test_12_existing_tests_structural():
 
         # Check that hermes_state has credential pool (may be in credential_pool.py, not state)
         state_file = hermes_root / "hermes_state.py"
-        state_content = state_file.read_text()
+        state_content = state_file.read_text(encoding="utf-8")
         # credential_pool may live in hermes_state.py or as a separate module
         has_cred_in_state = "credential_pool" in state_content
         cred_pool_file = hermes_root / "hermes_agent" / "credential_pool.py"
