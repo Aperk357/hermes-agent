@@ -771,7 +771,7 @@ class RouteLeaseManager:
         path = Path(self._lease_store_path)
         if path.exists():
             try:
-                with open(path, 'r') as f:
+                with open(path, 'r', encoding="utf-8") as f:
                     data = json.load(f)
                 for sid, lease_data in data.items():
                     self._leases[sid] = RouteLease.from_dict(lease_data)
@@ -787,7 +787,7 @@ class RouteLeaseManager:
         try:
             data = {k: v for k, v in self._leases.items()}
             data[lease.session_id] = lease.to_dict()
-            with open(path, 'w') as f:
+            with open(path, 'w', encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         except Exception:
             logger.warning("Failed to persist route lease", exc_info=True)
@@ -800,7 +800,7 @@ class RouteLeaseManager:
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
             data = {sid: lease.to_dict() for sid, lease in self._leases.items()}
-            with open(path, 'w') as f:
+            with open(path, 'w', encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         except Exception:
             logger.warning("Failed to persist all route leases", exc_info=True)

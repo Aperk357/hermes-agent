@@ -527,7 +527,7 @@ async def run_all_tests():
         ],
     }
     results_path = HERMES_AGENT_PATH / "test_harness_results.json"
-    with open(results_path, 'w') as f:
+    with open(results_path, 'w', encoding="utf-8") as f:
         json.dump(results_json, f, indent=2)
     logger.info("Results written to: %s", results_path)
 
