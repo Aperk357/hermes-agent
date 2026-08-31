@@ -458,8 +458,11 @@ MAX_SKILL_FILE_BYTES = 1_048_576    # 1 MiB per supporting file
 # Characters allowed in skill names (filesystem-safe, URL-friendly)
 VALID_NAME_RE = re.compile(r'^[a-z0-9][a-z0-9._-]*$')
 
-# Subdirectories allowed for write_file/remove_file
-ALLOWED_SUBDIRS = {"references", "templates", "scripts", "assets"}
+# Subdirectories allowed for write_file/remove_file.
+# "sections" holds the on-demand steps of a carved skill: readable through
+# skill_view like references/, so it must be writable here too — otherwise a
+# carved skill is readable but unmaintainable through the agent's own tool.
+ALLOWED_SUBDIRS = {"references", "templates", "scripts", "assets", "sections"}
 
 
 # =============================================================================

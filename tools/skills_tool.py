@@ -82,6 +82,7 @@ from utils import env_var_enabled
 from agent.skill_utils import (
     EXCLUDED_SKILL_DIRS as _EXCLUDED_SKILL_DIRS,
     is_skill_support_path as _is_skill_support_path,
+    is_excluded_skill_path as _is_excluded_skill_path,
 )
 
 logger = logging.getLogger(__name__)
@@ -1072,12 +1073,20 @@ def skill_view(
                     _record(found_skill_md.parent, found_skill_md)
 
             # Strategy 3: legacy flat <name>.md files anywhere under the dir.
-            # Exclude skill support docs: references/templates/assets/scripts
-            # are loaded through skill_view(skill, file_path=...) and must not
-            # shadow or collide with real skills that share the same basename.
+            # Exclude skill support docs: references/templates/assets/sections/
+            # scripts are loaded through skill_view(skill, file_path=...) and
+            # must not shadow or collide with real skills sharing a basename.
+            #
+            # _is_skill_support_path alone is not enough here: unlike the
+            # SKILL.md strategies above, this rglob is not anchored to a skill
+            # root, so it also reaches build-only trees like skills/_shared/.
+            # Without the excluded-dir check a shared snippet loads as a skill
+            # (e.g. skill_view("github-auth-detect") returning the raw snippet).
             for found_md in search_dir.rglob(f"{name}.md"):
-                if found_md.name != "SKILL.md" and not _is_skill_support_path(
-                    found_md
+                if (
+                    found_md.name != "SKILL.md"
+                    and not _is_skill_support_path(found_md)
+                    and not _is_excluded_skill_path(found_md)
                 ):
                     _record(None, found_md)
 
@@ -1237,7 +1246,12 @@ def skill_view(
                         if rel.startswith("references/"):
                             available_files["references"].append(rel)
                         elif rel.startswith("sections/"):
-                            available_files["sections"].append(rel)
+                            # manifest.json is the renderer's registry, not
+                            # agent content; listing it would make a build file
+                            # the only thing offered to an agent that followed
+                            # a section pointer.
+                            if f.name != "manifest.json":
+                                available_files["sections"].append(rel)
                         elif rel.startswith("templates/"):
                             available_files["templates"].append(rel)
                         elif rel.startswith("assets/"):

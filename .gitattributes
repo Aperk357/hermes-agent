@@ -8,3 +8,9 @@ web/package-lock.json linguist-generated=true
 Dockerfile  text eol=lf
 *.dockerfile text eol=lf
 docker/entrypoint.sh text eol=lf
+
+# Generated skill files are compared byte-for-byte by `hermes skills render
+# --check`. Pin LF so a core.autocrlf=true checkout can never commit CRLF.
+skills/**/SKILL.md text eol=lf
+skills/**/SKILL.md.tmpl text eol=lf
+skills/_shared/** text eol=lf

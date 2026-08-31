@@ -32,7 +32,12 @@ def _default_root() -> Path:
 
 def render_command(args) -> None:
     """Entry point for ``hermes skills render``."""
-    from tools.skill_template import TemplateError, check_templates, render_all
+    from tools.skill_template import (
+        TemplateError,
+        check_templates,
+        find_orphaned_generated,
+        render_all,
+    )
 
     root_arg: Optional[str] = getattr(args, "root", None)
     root = Path(root_arg).expanduser().resolve() if root_arg else _default_root()
@@ -50,16 +55,30 @@ def render_command(args) -> None:
         sys.exit(1)
 
     if check_only:
-        if results:
-            print(
-                color(
-                    f"{len(results)} generated file(s) out of date:", Colors.RED
+        orphans = find_orphaned_generated(root)
+        if results or orphans:
+            if results:
+                print(
+                    color(
+                        f"{len(results)} generated file(s) out of date:", Colors.RED
+                    )
                 )
-            )
-            for result in results:
-                print(f"  {result.output_path.relative_to(root.parent)}")
-            print()
-            print("Run 'hermes skills render' and commit the result.")
+                for result in results:
+                    print(f"  {result.output_path.relative_to(root.parent)}")
+                print()
+                print("Run 'hermes skills render' and commit the result.")
+            if orphans:
+                print(
+                    color(
+                        f"{len(orphans)} orphaned generated file(s) — marked "
+                        "auto-generated, but the template is gone:",
+                        Colors.RED,
+                    )
+                )
+                for orphan in orphans:
+                    print(f"  {orphan.relative_to(root.parent)}")
+                print()
+                print("Restore the template, or drop the banner and own the file.")
             sys.exit(1)
         print(color("All generated SKILL.md files are up to date.", Colors.GREEN))
         return

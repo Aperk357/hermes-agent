@@ -310,7 +310,7 @@ def _build_skill_message(
             supporting.extend(entries)
 
     if not supporting and skill_dir:
-        for subdir in ("references", "templates", "scripts", "assets"):
+        for subdir in ("references", "templates", "scripts", "assets", "sections"):
             subdir_path = skill_dir / subdir
             if subdir_path.exists():
                 for f in sorted(subdir_path.rglob("*")):

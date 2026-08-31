@@ -61,5 +61,5 @@ Then run `hermes skills render`.
 Add a tier only when the same *set* of snippets recurs. One skill wanting a
 subset is a reason to call `{{SNIPPET:...}}` directly, not to fork a tier.
 
-See `website/docs/contributing/skill-templates.md` for the full placeholder
-reference.
+See `website/docs/developer-guide/creating-skills.md` for the full
+placeholder reference.
