@@ -312,4 +312,20 @@ def build_skills_parser(subparsers, *, cmd_skills: Callable) -> None:
         "config",
         help="Interactive skill configuration — enable/disable individual skills",
     )
+
+    skills_render = skills_subparsers.add_parser(
+        "render",
+        help="Regenerate SKILL.md files from SKILL.md.tmpl templates",
+        description="Expand {{PLACEHOLDER}} tokens in SKILL.md.tmpl templates and write the SKILL.md files that ship. Shared prose lives once in skills/_shared/ instead of being copy-pasted into every skill.",
+    )
+    skills_render.add_argument(
+        "--check",
+        action="store_true",
+        help="Report drift without writing (exit 1 if any generated file is stale)",
+    )
+    skills_render.add_argument(
+        "--root",
+        default=None,
+        help="Skills directory to render (default: the repo's skills/)",
+    )
     skills_parser.set_defaults(func=cmd_skills)
