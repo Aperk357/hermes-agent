@@ -1028,12 +1028,15 @@ def skill_view(
             direct_path = search_dir / name
             if (
                 not _is_skill_support_path(direct_path)
+                and not _is_excluded_skill_path(direct_path)
                 and direct_path.is_dir()
                 and (direct_path / "SKILL.md").exists()
             ):
                 _record(direct_path, direct_path / "SKILL.md")
-            elif direct_path.with_suffix(".md").exists() and not _is_skill_support_path(
-                direct_path.with_suffix(".md")
+            elif (
+                direct_path.with_suffix(".md").exists()
+                and not _is_skill_support_path(direct_path.with_suffix(".md"))
+                and not _is_excluded_skill_path(direct_path.with_suffix(".md"))
             ):
                 _record(None, direct_path.with_suffix(".md"))
 
@@ -1044,14 +1047,19 @@ def skill_view(
                 categorized_path = search_dir / local_category_name
                 if (
                     not _is_skill_support_path(categorized_path)
+                    and not _is_excluded_skill_path(categorized_path)
                     and categorized_path.is_dir()
                     and (categorized_path / "SKILL.md").exists()
                 ):
                     _record(categorized_path, categorized_path / "SKILL.md")
-                elif categorized_path.with_suffix(
-                    ".md"
-                ).exists() and not _is_skill_support_path(
-                    categorized_path.with_suffix(".md")
+                elif (
+                    categorized_path.with_suffix(".md").exists()
+                    and not _is_skill_support_path(
+                        categorized_path.with_suffix(".md")
+                    )
+                    and not _is_excluded_skill_path(
+                        categorized_path.with_suffix(".md")
+                    )
                 ):
                     _record(None, categorized_path.with_suffix(".md"))
 
@@ -1246,11 +1254,14 @@ def skill_view(
                         if rel.startswith("references/"):
                             available_files["references"].append(rel)
                         elif rel.startswith("sections/"):
-                            # manifest.json is the renderer's registry, not
-                            # agent content; listing it would make a build file
-                            # the only thing offered to an agent that followed
-                            # a section pointer.
-                            if f.name != "manifest.json":
+                            # manifest.json (the renderer's registry) and
+                            # *.md.tmpl (unexpanded source) are build files.
+                            # A section pointer says its target "is the source
+                            # of truth for this step", so offering the .tmpl
+                            # hands the agent raw {{...}} tokens instead.
+                            if f.name != "manifest.json" and not f.name.endswith(
+                                ".tmpl"
+                            ):
                                 available_files["sections"].append(rel)
                         elif rel.startswith("templates/"):
                             available_files["templates"].append(rel)
@@ -1345,7 +1356,9 @@ def skill_view(
             sections_dir = skill_dir / "sections"
             if sections_dir.exists():
                 section_files = sorted(
-                    str(f.relative_to(skill_dir)) for f in sections_dir.glob("*.md")
+                    str(f.relative_to(skill_dir))
+                    for f in sections_dir.glob("*.md")
+                    if not f.name.endswith(".tmpl")
                 )
 
             templates_dir = skill_dir / "templates"

@@ -315,6 +315,14 @@ def _build_skill_message(
             if subdir_path.exists():
                 for f in sorted(subdir_path.rglob("*")):
                     if f.is_file() and not f.is_symlink():
+                        # sections/ holds agent-readable steps beside two build
+                        # artefacts: manifest.json (the renderer's registry) and
+                        # *.md.tmpl (unexpanded {{...}} source). Offering either
+                        # points the agent at something it must not act on.
+                        if subdir == "sections" and (
+                            f.name == "manifest.json" or f.name.endswith(".tmpl")
+                        ):
+                            continue
                         rel = str(f.relative_to(skill_dir))
                         supporting.append(rel)
 

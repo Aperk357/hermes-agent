@@ -167,17 +167,25 @@ Resolver = Callable[[TemplateContext, Sequence[str]], str]
 # a template has no frontmatter where the runtime sees one, the generated header
 # is written above the ``---`` fence, the runtime then finds no frontmatter, and
 # the skill silently loses the name and description that drive its discovery.
-# ``[ \t]*`` rather than the runtime's ``\s*``: the tolerance that matters is
-# trailing spaces/tabs and a fence at EOF, while ``\s*`` would also swallow the
-# blank line after the fence and shift every generated body. ``\Z`` accepts a
-# template whose closing fence has no final newline — the runtime rejects that,
-# so normalising it here repairs the file instead of shipping a nameless skill.
-_FRONTMATTER_CLOSE_RE = re.compile(r"\n---[ \t]*(?:\r?\n|\Z)")
+# ``[^\S\n]*`` is Unicode horizontal whitespace: everything the runtime's
+# ``\s*`` accepts EXCEPT the newline. Matching the runtime's tolerance is the
+# whole point — ``[ \t]*`` looked equivalent but left 25 characters (U+00A0,
+# U+3000, U+2009, U+202F, VT, FF, U+2028 …) where the runtime found a fence and
+# this did not, which is exactly the silent-name-loss failure below. Excluding
+# ``\n`` keeps the blank line after the fence in the body, where it belongs.
+# ``\Z`` accepts a fence with no final newline — the runtime rejects that, so
+# normalising it here repairs the file instead of shipping a nameless skill.
+_FRONTMATTER_CLOSE_RE = re.compile(r"\n---[^\S\n]*(?:\r?\n|\Z)")
 
-# A frontmatter line is a key, a list item, a comment, an indented
-# continuation, or blank. Used to reject a block that is really body prose.
+# A frontmatter line is blank, indented, a comment, a list item, a document
+# marker, a flow-collection closer, or something carrying a ``key:``. Kept
+# deliberately permissive: an ASCII-only key pattern rejected valid YAML such
+# as ``说明: 中文键`` and ``2fa: required``, and a false reject here refuses to
+# build a legitimate skill. The real guarantee is the post-render check in
+# ``_assert_runtime_can_read_frontmatter``; this only catches the obvious case
+# of body prose swallowed by an unclosed fence.
 _FRONTMATTER_LINE_RE = re.compile(
-    r"^(?:[ \t]|#|-\s|[A-Za-z_][A-Za-z0-9_.\-]*\s*:|\.\.\.|---)|^\s*$"
+    r"^(?:[ \t]|#|-\s|-$|\.\.\.|---|[\]\},]+\s*$|[^\n]*:|\s*$)"
 )
 
 
@@ -510,6 +518,14 @@ def _assert_no_near_miss_placeholders(text: str, ctx: "TemplateContext") -> None
         name = match.group(1)
         inner = match.group(0)[2:-2]
         spaced = inner != inner.strip()
+        start, end = match.span()
+        if (
+            start > 0
+            and end < len(text)
+            and text[start - 1] == "`"
+            and text[end] == "`"
+        ):
+            continue  # an inline-code example, e.g. `{{ section }}` in docs
         if name in RESOLVERS and not spaced:
             # Correctly spelled: a real token, left to the leftover check
             # below, which reports it with the right diagnosis.
@@ -561,6 +577,37 @@ def render_text(text: str, ctx: TemplateContext) -> str:
             f"{', '.join(sorted(set(remaining)))}"
         )
     return rendered
+
+
+def _assert_runtime_can_read_frontmatter(
+    content: str, frontmatter: str, tmpl_path: Path
+) -> None:
+    """Refuse to write a file whose frontmatter the runtime cannot read.
+
+    Pattern-matching the runtime's fence tolerance is fragile — one class of
+    whitespace was missed the first time and reproduced silent name loss with
+    a green ``--check``. So instead of trusting the patterns to agree, parse
+    the finished bytes with the runtime's own parser and require the name to
+    survive. Anything that slips past the regexes still fails the build here.
+    """
+    if not frontmatter:
+        return
+    try:
+        from agent.skill_utils import parse_frontmatter
+    except Exception:  # pragma: no cover - parser unavailable, skip the guard
+        return
+    declared = _frontmatter_value(frontmatter, "name")
+    if not declared:
+        return
+    parsed, _ = parse_frontmatter(content)
+    if parsed.get("name") != declared:
+        raise TemplateError(
+            f"{tmpl_path.name}: the rendered file's frontmatter does not read "
+            f"back — the template declares name {declared!r} but the runtime "
+            f"parser sees {parsed.get('name')!r}. The closing '---' fence is "
+            "probably followed by an unusual character; the skill would ship "
+            "with no name and never be discovered."
+        )
 
 
 def read_template(tmpl_path: Path) -> str:
@@ -636,6 +683,7 @@ def render_template(tmpl_path: Path, root: Path) -> str:
         content = f"{header}\n\n{rendered_body.lstrip(chr(10))}"
     if not content.endswith("\n"):
         content += "\n"
+    _assert_runtime_can_read_frontmatter(content, frontmatter, tmpl_path)
     # Only a skill's own SKILL.md.tmpl owns the pointers; a section template
     # renders one step and is not expected to reference its siblings.
     if tmpl_path.name == "SKILL.md.tmpl":
@@ -747,10 +795,14 @@ def find_orphaned_generated(root: Path) -> List[Path]:
         if path.with_name(f"{path.name}.tmpl").is_file():
             continue
         try:
-            head = path.read_text(encoding="utf-8", errors="replace")[:4096]
+            text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        if GENERATED_MARKER in head:
+        # The banner sits in the first lines, right under the frontmatter.
+        # Searching the whole head flagged hand-authored files that merely
+        # discuss the marker in prose.
+        _, body = split_frontmatter(text)
+        if GENERATED_MARKER in "\n".join(body.lstrip("\n").splitlines()[:2]):
             orphans.append(path)
     return sorted(orphans, key=lambda p: p.as_posix())
 

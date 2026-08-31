@@ -189,6 +189,40 @@ class TestFrontmatterAgreesWithRuntime:
         assert frontmatter.get("name") == "gh", label
         assert frontmatter.get("description") == "D.", label
 
+    @pytest.mark.parametrize(
+        "trailer",
+        ["\x0b", "\x0c", "\x1c", "\x1f", "\x85", "\xa0", "\u2000", "\u2009",
+         "\u2028", "\u202f", "\u205f", "\u3000"],
+        ids=lambda c: f"U+{ord(c):04X}",
+    )
+    def test_unicode_whitespace_after_the_fence_never_loses_the_name(
+        self, skills_root, trailer
+    ):
+        # The runtime's close pattern is Unicode-aware ``\s*``. Matching it with
+        # ``[ \t]*`` looked equivalent but left this whole family diverging,
+        # reproducing silent name loss with a green --check.
+        from agent.skill_utils import parse_frontmatter
+
+        tmpl = write(
+            skills_root / "cat" / "gh" / "SKILL.md.tmpl",
+            f"---\nname: gh\ndescription: D.\n---{trailer}\nB\n",
+        )
+        frontmatter, _ = parse_frontmatter(render_template(tmpl, skills_root))
+        assert frontmatter.get("name") == "gh"
+
+    @pytest.mark.parametrize(
+        "line",
+        ["说明: 中文键", "2fa: required", "<<: *d", '"key: with colon": v'],
+    )
+    def test_valid_yaml_frontmatter_is_not_wrongly_rejected(self, skills_root, line):
+        # A false reject refuses to build a legitimate skill. The ASCII-only
+        # key pattern rejected these; the repo ships zh-CN/es/ur-pk docs.
+        tmpl = write(
+            skills_root / "cat" / "gh" / "SKILL.md.tmpl",
+            f"---\nname: gh\ndescription: D.\n{line}\n---\n\nB\n",
+        )
+        assert "B" in render_template(tmpl, skills_root)
+
     def test_body_prose_is_never_swallowed_into_frontmatter(self, skills_root):
         # An unclosed opening fence lets the closing regex latch onto a '---'
         # rule in the body; _strip_build_only_keys would then delete body lines.
@@ -480,6 +514,15 @@ class TestResolution:
         with pytest.raises(TemplateError, match="unknown placeholder"):
             render_template(tmpl, skills_root)
 
+    def test_inline_code_examples_of_the_syntax_do_not_break_the_build(
+        self, skills_root
+    ):
+        # Documentation about this very syntax must be writable in a skill.
+        tmpl = make_skill(
+            skills_root, "s", "Write `{{ section }}` to point at a step.\n"
+        )
+        assert "{{ section }}" in render_template(tmpl, skills_root)
+
     def test_shell_expansions_are_not_mistaken_for_placeholders(self, skills_root):
         # Skills are full of ${VAR} and $(cmd); only {{SCREAMING_SNAKE}} is ours.
         body = '```bash\nX=${HOME:-/tmp}\nY=$(date) # {{ not a token }}\n```\n'
@@ -584,6 +627,17 @@ class TestRenderAll:
     def test_a_hand_owned_skill_md_is_not_an_orphan(self, skills_root):
         # Only files carrying the generated banner are claimed by the renderer.
         write(skills_root / "cat" / "plain" / "SKILL.md", "---\nname: plain\n---\n\n# Plain\n")
+        assert find_orphaned_generated(skills_root) == []
+
+    def test_prose_mentioning_the_banner_is_not_an_orphan(self, skills_root):
+        # The banner is a header, not a phrase: a hand-authored skill that
+        # merely discusses it must not fail CI with "restore the template".
+        write(
+            skills_root / "cat" / "mentions" / "SKILL.md",
+            "---\nname: mentions\n---\n\n# Docs\n\n"
+            "Generated files carry an `AUTO-GENERATED from` banner; do not "
+            "edit them by hand.\n",
+        )
         assert find_orphaned_generated(skills_root) == []
 
     def test_render_text_is_usable_standalone(self, skills_root):

@@ -14,3 +14,7 @@ docker/entrypoint.sh text eol=lf
 skills/**/SKILL.md text eol=lf
 skills/**/SKILL.md.tmpl text eol=lf
 skills/_shared/** text eol=lf
+
+# Section files are generated and byte-compared by the same gate.
+skills/**/sections/*.md text eol=lf
+skills/**/sections/*.md.tmpl text eol=lf
