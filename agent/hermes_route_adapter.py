@@ -55,11 +55,61 @@ from agent.route_lease_manager import (
 
 logger = logging.getLogger(__name__)
 
-# Default location of the pdv-provider-routing checkout on this machine.
-# Overridable via HERMES_PDV_PROVIDER_ROUTING_PATH for other hosts/CI.
-_DEFAULT_PDV_PROVIDER_ROUTING_PATH = Path(
-    r"C:\Users\User\Desktop\PDV_APPS\pdv-provider-routing"
-)
+def _windows_desktop_path() -> Optional[Path]:
+    """Resolve the real Windows Desktop folder via the shell API.
+
+    %USERPROFILE%\\Desktop is a hardcoded-path footgun: when OneDrive Backup
+    (Known Folder Move) is enabled, the real Desktop lives at
+    %USERPROFILE%\\OneDrive\\Desktop and %USERPROFILE%\\Desktop is an empty
+    husk. SHGetKnownFolderPath returns wherever the Desktop known folder is
+    actually redirected to. Returns None off Windows or if the API call fails.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+
+        # SHGetKnownFolderPath takes a GUID struct for FOLDERID_Desktop
+        # ({B4BFCC3A-DB2C-424C-B029-7FE99A87C641}), not a string.
+        class GUID(ctypes.Structure):
+            _fields_ = [
+                ("Data1", ctypes.c_ulong),
+                ("Data2", ctypes.c_ushort),
+                ("Data3", ctypes.c_ushort),
+                ("Data4", ctypes.c_ubyte * 8),
+            ]
+
+        guid = GUID(
+            0xB4BFCC3A,
+            0xDB2C,
+            0x424C,
+            (ctypes.c_ubyte * 8)(0xB0, 0x29, 0x7F, 0xE9, 0x9A, 0x87, 0xC6, 0x41),
+        )
+        path_ptr = ctypes.c_wchar_p()
+        result = ctypes.windll.shell32.SHGetKnownFolderPath(
+            ctypes.byref(guid), 0, None, ctypes.byref(path_ptr)
+        )
+        if result != 0 or not path_ptr.value:
+            return None
+        resolved = Path(path_ptr.value)
+        ctypes.windll.ole32.CoTaskMemFree(path_ptr)
+        return resolved
+    except Exception:
+        return None
+
+
+def _default_pdv_provider_routing_path() -> Path:
+    """Best-effort default location of the pdv-provider-routing checkout.
+
+    Prefers the shell-resolved Desktop (correct under OneDrive Known Folder
+    Move); falls back to the literal %USERPROFILE%\\Desktop path used by
+    this repo's own historical layout. Always overridable via
+    HERMES_PDV_PROVIDER_ROUTING_PATH.
+    """
+    desktop = _windows_desktop_path()
+    if desktop is not None:
+        return desktop / "PDV_APPS" / "pdv-provider-routing"
+    return Path.home() / "Desktop" / "PDV_APPS" / "pdv-provider-routing"
 
 
 def _ensure_pdv_provider_routing_importable() -> None:
@@ -78,7 +128,7 @@ def _ensure_pdv_provider_routing_importable() -> None:
     import os
 
     root = os.environ.get("HERMES_PDV_PROVIDER_ROUTING_PATH")
-    root_path = Path(root) if root else _DEFAULT_PDV_PROVIDER_ROUTING_PATH
+    root_path = Path(root) if root else _default_pdv_provider_routing_path()
     if root_path.exists() and str(root_path) not in sys.path:
         sys.path.insert(0, str(root_path))
 
