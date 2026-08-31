@@ -1354,3 +1354,17 @@ not the specific names.
 
 Reviewers should reject new change-detector tests; authors should convert
 them into invariants before re-requesting review.
+
+## Agent Skills
+
+### Issue Tracker
+
+GitHub Issues; external PRs are not a triage surface by default. See docs/agents/issue-tracker.md.
+
+### Triage Labels
+
+Default Matt Pocock skill labels are used: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See docs/agents/triage-labels.md.
+
+### Domain Docs
+
+Single-context layout by default; read root CONTEXT.md and docs/adr/ when present. See docs/agents/domain.md.
