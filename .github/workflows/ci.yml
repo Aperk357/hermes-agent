@@ -99,6 +99,11 @@ jobs:
     needs: detect
     uses: ./.github/workflows/uv-lockfile-check.yml
 
+  skill-templates:
+    name: Check generated SKILL.md files
+    needs: detect
+    uses: ./.github/workflows/skill-template-check.yml
+
   docker-lint:
     name: Lint Docker scripts
     needs: detect
@@ -144,6 +149,7 @@ jobs:
       - history-check
       - contributor-check
       - uv-lockfile
+      - skill-templates
       - docker-lint
       - supply-chain
       - osv-scanner

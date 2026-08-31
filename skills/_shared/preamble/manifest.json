@@ -1,0 +1,9 @@
+{
+  "$comment": "Named bundles of shared snippets. A skill opts into a whole bundle with 'preamble-tier: <name>' in its SKILL.md.tmpl frontmatter, then writes {{PREAMBLE}} where the bundle should land. Snippet ids resolve against ../snippets/<id>.md. A skill that wants only part of a bundle should call {{SNIPPET:<id>}} directly instead of inventing a near-duplicate tier.",
+  "tiers": {
+    "github-api": [
+      "github-auth-detect",
+      "github-owner-repo"
+    ]
+  }
+}
