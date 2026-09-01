@@ -53,6 +53,36 @@ gstack renders per-host and per-model because each of its skills boots a
 standalone ``claude -p`` process; Hermes loads skills into a live session, so
 the host/model/telemetry layers are dropped and the section carve — which
 decides how much text enters the prompt — carries the weight.
+
+This module is a derivative work: the pipeline shape, the bounded multi-pass
+resolve, the section-pointer and section-index forms, and the generated-file
+banner all follow gstack's ``scripts/gen-skill-docs.ts``,
+``scripts/discover-skills.ts`` and ``scripts/resolvers/*.ts``. gstack is MIT
+licensed, which permits this on condition that its notice travels with the
+derived code:
+
+    MIT License
+
+    Copyright (c) 2026 Garry Tan
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to permit
+    persons to whom the Software is furnished to do so, subject to the
+    following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
@@ -63,27 +93,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence
 
-# Directories that never contain templates.  Mirrors the spirit of
-# ``agent.skill_utils.EXCLUDED_SKILL_DIRS`` without importing it — this module
-# is build tooling and must stay importable with no agent dependencies.
-SKIP_DIRS = frozenset(
-    (
-        ".git",
-        ".github",
-        ".hub",
-        ".archive",
-        ".venv",
-        "venv",
-        "node_modules",
-        "site-packages",
-        "__pycache__",
-        ".tox",
-        ".nox",
-        ".pytest_cache",
-        ".mypy_cache",
-        ".ruff_cache",
-    )
-)
+from agent.skill_utils import EXCLUDED_SKILL_DIRS
+
+# Directories that never contain templates. Imported rather than re-listed:
+# a hand-copy of this set is exactly the duplication-drift this module exists
+# to prevent, and it had already drifted once (``_shared`` was added to the
+# scanner's set but not to the copy here). ``agent.skill_utils`` imports on
+# bare stdlib, so the CI gate still needs no dependency install.
+SKIP_DIRS = EXCLUDED_SKILL_DIRS
 
 #: Name of the build-only directory holding shared snippets and the tier map.
 SHARED_DIR_NAME = "_shared"
@@ -145,20 +162,75 @@ Resolver = Callable[[TemplateContext, Sequence[str]], str]
 # ── Frontmatter ────────────────────────────────────────────────────────────
 
 
+# Closing fence, deliberately matching ``agent.skill_utils.parse_frontmatter``'s
+# ``re.search(r"\n---\s*\n", ...)``. The two MUST agree: if the renderer decides
+# a template has no frontmatter where the runtime sees one, the generated header
+# is written above the ``---`` fence, the runtime then finds no frontmatter, and
+# the skill silently loses the name and description that drive its discovery.
+# ``[^\S\n]*`` is Unicode horizontal whitespace: everything the runtime's
+# ``\s*`` accepts EXCEPT the newline. Matching the runtime's tolerance is the
+# whole point — ``[ \t]*`` looked equivalent but left 25 characters (U+00A0,
+# U+3000, U+2009, U+202F, VT, FF, U+2028 …) where the runtime found a fence and
+# this did not, which is exactly the silent-name-loss failure below. Excluding
+# ``\n`` keeps the blank line after the fence in the body, where it belongs.
+# ``\Z`` accepts a fence with no final newline — the runtime rejects that, so
+# normalising it here repairs the file instead of shipping a nameless skill.
+_FRONTMATTER_CLOSE_RE = re.compile(r"\n---[^\S\n]*(?:\r?\n|\Z)")
+
+# A frontmatter line is blank, indented, a comment, a list item, a document
+# marker, a flow-collection closer, or something carrying a ``key:``. Kept
+# deliberately permissive: an ASCII-only key pattern rejected valid YAML such
+# as ``说明: 中文键`` and ``2fa: required``, and a false reject here refuses to
+# build a legitimate skill. The real guarantee is the post-render check in
+# ``_assert_runtime_can_read_frontmatter``; this only catches the obvious case
+# of body prose swallowed by an unclosed fence.
+_FRONTMATTER_LINE_RE = re.compile(
+    r"^(?:[ \t]|#|-\s|-$|\.\.\.|---|[\]\},]+\s*$|[^\n]*:|\s*$)"
+)
+
+
 def split_frontmatter(text: str) -> tuple[str, str]:
     """Split *text* into ``(frontmatter_block, body)``.
 
     The frontmatter block includes both ``---`` fences and the trailing
     newline.  Returns ``("", text)`` when there is no frontmatter, so callers
     can treat the two cases uniformly.
+
+    Tolerances match the runtime parser exactly — a bare ``---`` prefix (not
+    only ``---\n``) and a closing fence with trailing whitespace or at EOF.
     """
-    if not text.startswith("---\n"):
+    if not text.startswith("---"):
         return "", text
-    end = text.find("\n---\n", 3)
-    if end == -1:
+    match = _FRONTMATTER_CLOSE_RE.search(text, 3)
+    if match is None:
         return "", text
-    cut = end + len("\n---\n")
-    return text[:cut], text[cut:]
+    cut = match.end()
+    block = text[:cut]
+    if not block.endswith("\n"):
+        block += "\n"
+    return block, text[cut:]
+
+
+def _assert_frontmatter_is_plausible(frontmatter: str, tmpl_path: Path) -> None:
+    """Reject a "frontmatter" block that is really body prose.
+
+    A template whose opening fence is never properly closed lets the closing
+    regex latch onto a ``---`` horizontal rule further down, swallowing real
+    body text into the frontmatter — where ``_strip_build_only_keys`` can then
+    delete lines from it. Both this renderer and the runtime would misread such
+    a file identically, so catch it at build time instead.
+    """
+    inner = frontmatter.split("\n", 1)[1] if "\n" in frontmatter else ""
+    for number, line in enumerate(inner.splitlines(), start=2):
+        if line.strip() in ("---", "..."):
+            break
+        if not _FRONTMATTER_LINE_RE.match(line):
+            raise TemplateError(
+                f"{tmpl_path.name}:{number}: {line.strip()!r} is not a "
+                "frontmatter line. The opening '---' is probably never closed, "
+                "so a '---' later in the body was mistaken for the closing "
+                "fence. Close the frontmatter."
+            )
 
 
 def _frontmatter_value(frontmatter: str, key: str) -> Optional[str]:
@@ -269,15 +341,59 @@ def load_section_manifest(skill_dir: Path) -> List[dict]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise TemplateError(f"{path}: invalid JSON — {exc}") from exc
+    if not isinstance(data, dict):
+        raise TemplateError(f"{path}: expected a JSON object at the top level")
     sections = data.get("sections")
     if not isinstance(sections, list):
         raise TemplateError(f"{path}: expected a top-level 'sections' array")
+    seen_ids: set = set()
     for entry in sections:
+        if not isinstance(entry, dict):
+            raise TemplateError(
+                f"{path}: every entry in 'sections' must be an object, got "
+                f"{type(entry).__name__}"
+            )
+        for key in ("id", "file", "trigger"):
+            if key in entry and not isinstance(entry[key], str):
+                raise TemplateError(
+                    f"{path}: section {entry.get('id', '?')!r} has a "
+                    f"non-string {key!r}"
+                )
         missing = [k for k in ("id", "file", "trigger") if not entry.get(k)]
         if missing:
             raise TemplateError(
                 f"{path}: section {entry.get('id', '?')!r} is missing "
                 f"{', '.join(missing)}"
+            )
+        file_name = str(entry["file"])
+        if "/" in file_name or "\\" in file_name or file_name.startswith("."):
+            raise TemplateError(
+                f"{path}: section {entry['id']!r} has file {file_name!r} — "
+                "must be a bare file name inside sections/, since it is "
+                "rendered into a path the agent is told to load"
+            )
+        if entry["id"] in seen_ids:
+            raise TemplateError(
+                f"{path}: duplicate section id {entry['id']!r}. Only the first "
+                "is ever pointed at, so the reachability check cannot see that "
+                "the second is stranded."
+            )
+        seen_ids.add(entry["id"])
+        for key in ("id", "file", "trigger"):
+            if "{{" in str(entry.get(key, "")):
+                raise TemplateError(
+                    f"{path}: section {entry['id']!r} has {key!r} containing "
+                    "'{{'. Manifest text is rendered into the skill and would "
+                    "be re-scanned as a placeholder."
+                )
+        target = skill_dir / "sections" / file_name
+        # The body may itself be generated from <file>.tmpl, which has not been
+        # rendered yet on a skill's first build — either satisfies the pointer.
+        if not target.is_file() and not target.with_name(f"{file_name}.tmpl").is_file():
+            raise TemplateError(
+                f"{path}: section {entry['id']!r} points at sections/{file_name}, "
+                "which does not exist. A STOP pointer to a missing file is a "
+                "step that silently stops happening."
             )
     return sections
 
@@ -328,7 +444,9 @@ def resolve_section_index(ctx: TemplateContext, args: Sequence[str]) -> str:
         "|------|-------------------|",
     ]
     for entry in sections:
-        lines.append(f"| {entry['trigger']} | `sections/{entry['file']}` |")
+        # A '|' would end the cell and a newline would end the row.
+        trigger = " ".join(entry["trigger"].split()).replace("|", "\\|")
+        lines.append(f"| {trigger} | `sections/{entry['file']}` |")
     return "\n".join(lines)
 
 
@@ -353,8 +471,13 @@ def resolve_invoke_skill(ctx: TemplateContext, args: Sequence[str]) -> str:
     target = args[0]
     extra: List[str] = []
     for arg in args[1:]:
-        if arg.startswith("skip="):
-            extra.extend(s.strip() for s in arg[len("skip=") :].split(",") if s.strip())
+        if not arg.startswith("skip="):
+            raise TemplateError(
+                f"{ctx.rel(ctx.tmpl_path)}: {{{{INVOKE_SKILL}}}} got unknown "
+                f"argument {arg!r}; the only supported form is "
+                "skip=Section A,Section B"
+            )
+        extra.extend(s.strip() for s in arg[len("skip=") :].split(",") if s.strip())
     skips = list(DEFAULT_INVOKE_SKIPS) + extra
     skip_lines = "\n".join(f"- {s}" for s in skips)
     return (
@@ -379,6 +502,41 @@ RESOLVERS: Dict[str, Resolver] = {
 
 
 # ── Rendering ──────────────────────────────────────────────────────────────
+
+
+# ``{{name}}`` / ``{{ NAME }}`` — shaped like a placeholder but not matched by
+# PLACEHOLDER_RE, so it would sail through both the unknown-placeholder guard
+# and the leftover check and ship verbatim. Deliberately narrow: the token must
+# be a bare identifier with nothing but whitespace inside the braces, so shell
+# and awk constructs like ``{{ print $1 }}`` and prose like ``{{ not a token }}``
+# do not match.
+NEAR_MISS_RE = re.compile(r"\{\{\s*([A-Za-z][A-Za-z0-9_]*)(?::[^}\n]*)?\s*\}\}")
+
+
+def _assert_no_near_miss_placeholders(text: str, ctx: "TemplateContext") -> None:
+    for match in NEAR_MISS_RE.finditer(text):
+        name = match.group(1)
+        inner = match.group(0)[2:-2]
+        spaced = inner != inner.strip()
+        start, end = match.span()
+        if (
+            start > 0
+            and end < len(text)
+            and text[start - 1] == "`"
+            and text[end] == "`"
+        ):
+            continue  # an inline-code example, e.g. `{{ section }}` in docs
+        if name in RESOLVERS and not spaced:
+            # Correctly spelled: a real token, left to the leftover check
+            # below, which reports it with the right diagnosis.
+            continue
+        if name.upper() in RESOLVERS:
+            raise TemplateError(
+                f"{ctx.rel(ctx.tmpl_path)}: {match.group(0)!r} looks like a "
+                f"placeholder but does not match one. Placeholder names are "
+                f"upper-case with no spaces inside the braces — did you mean "
+                f"{{{{{name.upper()}}}}}?"
+            )
 
 
 def render_text(text: str, ctx: TemplateContext) -> str:
@@ -408,19 +566,63 @@ def render_text(text: str, ctx: TemplateContext) -> str:
     # Judge by what is left, not by whether the loop ran out: text that needed
     # every pass but did resolve is fine, while a self-referential snippet
     # keeps re-emitting its own token and is still holding one here.
+    _assert_no_near_miss_placeholders(rendered, ctx)
+
     remaining = PLACEHOLDER_RE.findall(rendered)
     if remaining:
         raise TemplateError(
-            f"{ctx.rel(ctx.tmpl_path)}: placeholders still expanding after "
-            f"{MAX_PASSES} passes — a snippet probably includes itself. "
-            f"Still unresolved: {', '.join(sorted(set(remaining)))}"
+            f"{ctx.rel(ctx.tmpl_path)}: placeholders still unresolved after "
+            f"{MAX_PASSES} passes — either a snippet includes itself, or the "
+            f"include chain is deeper than {MAX_PASSES}. Still unresolved: "
+            f"{', '.join(sorted(set(remaining)))}"
         )
     return rendered
 
 
+def _assert_runtime_can_read_frontmatter(
+    content: str, frontmatter: str, tmpl_path: Path
+) -> None:
+    """Refuse to write a file whose frontmatter the runtime cannot read.
+
+    Pattern-matching the runtime's fence tolerance is fragile — one class of
+    whitespace was missed the first time and reproduced silent name loss with
+    a green ``--check``. So instead of trusting the patterns to agree, parse
+    the finished bytes with the runtime's own parser and require the name to
+    survive. Anything that slips past the regexes still fails the build here.
+    """
+    if not frontmatter:
+        return
+    try:
+        from agent.skill_utils import parse_frontmatter
+    except Exception:  # pragma: no cover - parser unavailable, skip the guard
+        return
+    declared = _frontmatter_value(frontmatter, "name")
+    if not declared:
+        return
+    parsed, _ = parse_frontmatter(content)
+    if parsed.get("name") != declared:
+        raise TemplateError(
+            f"{tmpl_path.name}: the rendered file's frontmatter does not read "
+            f"back — the template declares name {declared!r} but the runtime "
+            f"parser sees {parsed.get('name')!r}. The closing '---' fence is "
+            "probably followed by an unusual character; the skill would ship "
+            "with no name and never be discovered."
+        )
+
+
+def read_template(tmpl_path: Path) -> str:
+    """Read a template, dropping a UTF-8 BOM.
+
+    A BOM sits in front of the opening ``---`` and hides the frontmatter from
+    both this renderer and the runtime, so strip it rather than ship a skill
+    with no name.
+    """
+    return tmpl_path.read_text(encoding="utf-8").lstrip("\ufeff")
+
+
 def build_context(tmpl_path: Path, root: Path) -> TemplateContext:
     """Derive a context from a template path and its frontmatter."""
-    text = tmpl_path.read_text(encoding="utf-8")
+    text = read_template(tmpl_path)
     frontmatter, _ = split_frontmatter(text)
     skill_dir = tmpl_path.parent
     # A section template lives at <skill>/sections/<name>.md.tmpl, so its
@@ -429,7 +631,12 @@ def build_context(tmpl_path: Path, root: Path) -> TemplateContext:
     # skill the agent can actually load, not the string "sections".
     if skill_dir.name == "sections":
         skill_dir = skill_dir.parent
-    name = _frontmatter_value(frontmatter, "name") or skill_dir.name
+    # A section template's own `name:` must not win: every {{SECTION}} pointer
+    # and {{SKILL_NAME}} it renders has to name the skill the agent can load.
+    if tmpl_path.parent.name == "sections":
+        name = skill_dir.name
+    else:
+        name = _frontmatter_value(frontmatter, "name") or skill_dir.name
     return TemplateContext(
         skill_name=name,
         skill_dir=skill_dir,
@@ -462,8 +669,10 @@ def _assert_every_section_is_reachable(ctx: TemplateContext) -> None:
 def render_template(tmpl_path: Path, root: Path) -> str:
     """Render one template to its final file content."""
     ctx = build_context(tmpl_path, root)
-    text = tmpl_path.read_text(encoding="utf-8")
+    text = read_template(tmpl_path)
     frontmatter, body = split_frontmatter(text)
+    if frontmatter:
+        _assert_frontmatter_is_plausible(frontmatter, tmpl_path)
     header = GENERATED_HEADER.format(source=tmpl_path.name)
     rendered_body = render_text(body, ctx)
     if frontmatter:
@@ -474,6 +683,7 @@ def render_template(tmpl_path: Path, root: Path) -> str:
         content = f"{header}\n\n{rendered_body.lstrip(chr(10))}"
     if not content.endswith("\n"):
         content += "\n"
+    _assert_runtime_can_read_frontmatter(content, frontmatter, tmpl_path)
     # Only a skill's own SKILL.md.tmpl owns the pointers; a section template
     # renders one step and is not expected to reference its siblings.
     if tmpl_path.name == "SKILL.md.tmpl":
@@ -536,22 +746,65 @@ def render_all(root: Path, *, write: bool = True) -> List[RenderResult]:
     With ``write=False`` nothing touches disk — that is the freshness check,
     which needs the comparison but not the side effect.
     """
+    # Render everything before writing anything: a failure on the tenth
+    # template must not leave the first nine rewritten on disk.
+    rendered: List[tuple] = [
+        (tmpl_path, render_template(tmpl_path, root))
+        for tmpl_path in discover_templates(root)
+    ]
     results: List[RenderResult] = []
-    for tmpl_path in discover_templates(root):
-        content = render_template(tmpl_path, root)
+    for tmpl_path, content in rendered:
         output_path = output_path_for(tmpl_path)
         try:
+            # Universal newlines on purpose: a Windows checkout under
+            # core.autocrlf=true holds CRLF on disk, and comparing raw bytes
+            # would report permanent false drift there. .gitattributes pins LF
+            # for these paths so CRLF never enters the repository itself.
             existing = output_path.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             existing = None
         changed = existing != content
         if write and changed:
-            # newline="\n" pins LF on every platform: a Windows checkout would
-            # otherwise write CRLF and fail the freshness check in CI forever.
+            # newline="\n" pins LF on every platform: a bare open(..., "w") on
+            # Windows emits CRLF, which would then be what gets committed.
             with open(output_path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(content)
         results.append(RenderResult(tmpl_path, output_path, content, changed))
     return results
+
+
+#: Substring identifying a file this renderer produced.
+GENERATED_MARKER = "AUTO-GENERATED from"
+
+
+def find_orphaned_generated(root: Path) -> List[Path]:
+    """Generated files whose template no longer exists.
+
+    ``check_templates`` is driven by discovered templates, so deleting a
+    ``.tmpl`` quietly un-gates the file it used to produce: nothing compares it
+    to anything, while it still carries the "do not edit directly" banner and
+    points at a template that is gone. Catch that separately.
+    """
+    orphans: List[Path] = []
+    for path in _walk(root):
+        is_generated_name = path.name == "SKILL.md" or (
+            path.parent.name == "sections" and path.name.endswith(".md")
+        )
+        if not is_generated_name:
+            continue
+        if path.with_name(f"{path.name}.tmpl").is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # The banner sits in the first lines, right under the frontmatter.
+        # Searching the whole head flagged hand-authored files that merely
+        # discuss the marker in prose.
+        _, body = split_frontmatter(text)
+        if GENERATED_MARKER in "\n".join(body.lstrip("\n").splitlines()[:2]):
+            orphans.append(path)
+    return sorted(orphans, key=lambda p: p.as_posix())
 
 
 def check_templates(root: Path) -> List[RenderResult]:
@@ -600,11 +853,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
 
     if args.check:
-        if results:
-            print(f"{len(results)} generated file(s) out of date:")
+        orphans = find_orphaned_generated(root)
+        if results or orphans:
             for result in results:
-                print(f"  {result.output_path.relative_to(root.parent)}")
-            print("\nRun 'hermes skills render' and commit the result.")
+                print(f"  out of date: {result.output_path.relative_to(root.parent)}")
+            for orphan in orphans:
+                print(f"  orphaned:    {orphan.relative_to(root.parent)}")
+            if results:
+                print("\nRun 'hermes skills render' and commit the result.")
+            if orphans:
+                print(
+                    "\nOrphaned files are marked auto-generated but their template "
+                    "is gone. Restore the template, or remove the banner and own "
+                    "the file by hand."
+                )
             return 1
         print("All generated SKILL.md files are up to date.")
         return 0

@@ -82,6 +82,7 @@ from utils import env_var_enabled
 from agent.skill_utils import (
     EXCLUDED_SKILL_DIRS as _EXCLUDED_SKILL_DIRS,
     is_skill_support_path as _is_skill_support_path,
+    is_excluded_skill_path as _is_excluded_skill_path,
 )
 
 logger = logging.getLogger(__name__)
@@ -1027,12 +1028,15 @@ def skill_view(
             direct_path = search_dir / name
             if (
                 not _is_skill_support_path(direct_path)
+                and not _is_excluded_skill_path(direct_path)
                 and direct_path.is_dir()
                 and (direct_path / "SKILL.md").exists()
             ):
                 _record(direct_path, direct_path / "SKILL.md")
-            elif direct_path.with_suffix(".md").exists() and not _is_skill_support_path(
-                direct_path.with_suffix(".md")
+            elif (
+                direct_path.with_suffix(".md").exists()
+                and not _is_skill_support_path(direct_path.with_suffix(".md"))
+                and not _is_excluded_skill_path(direct_path.with_suffix(".md"))
             ):
                 _record(None, direct_path.with_suffix(".md"))
 
@@ -1043,14 +1047,19 @@ def skill_view(
                 categorized_path = search_dir / local_category_name
                 if (
                     not _is_skill_support_path(categorized_path)
+                    and not _is_excluded_skill_path(categorized_path)
                     and categorized_path.is_dir()
                     and (categorized_path / "SKILL.md").exists()
                 ):
                     _record(categorized_path, categorized_path / "SKILL.md")
-                elif categorized_path.with_suffix(
-                    ".md"
-                ).exists() and not _is_skill_support_path(
-                    categorized_path.with_suffix(".md")
+                elif (
+                    categorized_path.with_suffix(".md").exists()
+                    and not _is_skill_support_path(
+                        categorized_path.with_suffix(".md")
+                    )
+                    and not _is_excluded_skill_path(
+                        categorized_path.with_suffix(".md")
+                    )
                 ):
                     _record(None, categorized_path.with_suffix(".md"))
 
@@ -1072,12 +1081,20 @@ def skill_view(
                     _record(found_skill_md.parent, found_skill_md)
 
             # Strategy 3: legacy flat <name>.md files anywhere under the dir.
-            # Exclude skill support docs: references/templates/assets/scripts
-            # are loaded through skill_view(skill, file_path=...) and must not
-            # shadow or collide with real skills that share the same basename.
+            # Exclude skill support docs: references/templates/assets/sections/
+            # scripts are loaded through skill_view(skill, file_path=...) and
+            # must not shadow or collide with real skills sharing a basename.
+            #
+            # _is_skill_support_path alone is not enough here: unlike the
+            # SKILL.md strategies above, this rglob is not anchored to a skill
+            # root, so it also reaches build-only trees like skills/_shared/.
+            # Without the excluded-dir check a shared snippet loads as a skill
+            # (e.g. skill_view("github-auth-detect") returning the raw snippet).
             for found_md in search_dir.rglob(f"{name}.md"):
-                if found_md.name != "SKILL.md" and not _is_skill_support_path(
-                    found_md
+                if (
+                    found_md.name != "SKILL.md"
+                    and not _is_skill_support_path(found_md)
+                    and not _is_excluded_skill_path(found_md)
                 ):
                     _record(None, found_md)
 
@@ -1237,7 +1254,15 @@ def skill_view(
                         if rel.startswith("references/"):
                             available_files["references"].append(rel)
                         elif rel.startswith("sections/"):
-                            available_files["sections"].append(rel)
+                            # manifest.json (the renderer's registry) and
+                            # *.md.tmpl (unexpanded source) are build files.
+                            # A section pointer says its target "is the source
+                            # of truth for this step", so offering the .tmpl
+                            # hands the agent raw {{...}} tokens instead.
+                            if f.name != "manifest.json" and not f.name.endswith(
+                                ".tmpl"
+                            ):
+                                available_files["sections"].append(rel)
                         elif rel.startswith("templates/"):
                             available_files["templates"].append(rel)
                         elif rel.startswith("assets/"):
@@ -1331,7 +1356,9 @@ def skill_view(
             sections_dir = skill_dir / "sections"
             if sections_dir.exists():
                 section_files = sorted(
-                    str(f.relative_to(skill_dir)) for f in sections_dir.glob("*.md")
+                    str(f.relative_to(skill_dir))
+                    for f in sections_dir.glob("*.md")
+                    if not f.name.endswith(".tmpl")
                 )
 
             templates_dir = skill_dir / "templates"

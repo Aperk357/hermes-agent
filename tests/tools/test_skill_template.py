@@ -13,6 +13,7 @@ import pytest
 
 from tools.skill_template import (
     GENERATED_HEADER,
+    find_orphaned_generated,
     MAX_PASSES,
     TemplateError,
     build_context,
@@ -158,14 +159,94 @@ class TestPreamble:
         assert "name: s" in out
 
 
+class TestFrontmatterAgreesWithRuntime:
+    """The renderer and ``agent.skill_utils.parse_frontmatter`` must agree.
+
+    Where they disagree the generated header lands above the ``---`` fence, the
+    runtime then finds no frontmatter, and the skill silently loses the name
+    and description that drive its discovery.
+    """
+
+    @pytest.mark.parametrize(
+        "label,template",
+        [
+            ("fence at EOF", "---\nname: gh\ndescription: D.\n---"),
+            ("trailing space", "---\nname: gh\ndescription: D.\n--- \nB\n"),
+            ("trailing tab", "---\nname: gh\ndescription: D.\n---\t\nB\n"),
+            ("four-dash open", "----\nname: gh\ndescription: D.\n---\nB\n"),
+            ("utf-8 BOM", "\ufeff---\nname: gh\ndescription: D.\n---\nB\n"),
+            ("control", "---\nname: gh\ndescription: D.\n---\n\nB\n"),
+        ],
+    )
+    def test_runtime_can_still_read_name_and_description(
+        self, skills_root, label, template
+    ):
+        from agent.skill_utils import parse_frontmatter
+
+        tmpl = write(skills_root / "cat" / "gh" / "SKILL.md.tmpl", template)
+        rendered = render_template(tmpl, skills_root)
+        frontmatter, _ = parse_frontmatter(rendered)
+        assert frontmatter.get("name") == "gh", label
+        assert frontmatter.get("description") == "D.", label
+
+    @pytest.mark.parametrize(
+        "trailer",
+        ["\x0b", "\x0c", "\x1c", "\x1f", "\x85", "\xa0", "\u2000", "\u2009",
+         "\u2028", "\u202f", "\u205f", "\u3000"],
+        ids=lambda c: f"U+{ord(c):04X}",
+    )
+    def test_unicode_whitespace_after_the_fence_never_loses_the_name(
+        self, skills_root, trailer
+    ):
+        # The runtime's close pattern is Unicode-aware ``\s*``. Matching it with
+        # ``[ \t]*`` looked equivalent but left this whole family diverging,
+        # reproducing silent name loss with a green --check.
+        from agent.skill_utils import parse_frontmatter
+
+        tmpl = write(
+            skills_root / "cat" / "gh" / "SKILL.md.tmpl",
+            f"---\nname: gh\ndescription: D.\n---{trailer}\nB\n",
+        )
+        frontmatter, _ = parse_frontmatter(render_template(tmpl, skills_root))
+        assert frontmatter.get("name") == "gh"
+
+    @pytest.mark.parametrize(
+        "line",
+        ["说明: 中文键", "2fa: required", "<<: *d", '"key: with colon": v'],
+    )
+    def test_valid_yaml_frontmatter_is_not_wrongly_rejected(self, skills_root, line):
+        # A false reject refuses to build a legitimate skill. The ASCII-only
+        # key pattern rejected these; the repo ships zh-CN/es/ur-pk docs.
+        tmpl = write(
+            skills_root / "cat" / "gh" / "SKILL.md.tmpl",
+            f"---\nname: gh\ndescription: D.\n{line}\n---\n\nB\n",
+        )
+        assert "B" in render_template(tmpl, skills_root)
+
+    def test_body_prose_is_never_swallowed_into_frontmatter(self, skills_root):
+        # An unclosed opening fence lets the closing regex latch onto a '---'
+        # rule in the body; _strip_build_only_keys would then delete body lines.
+        tmpl = write(
+            skills_root / "cat" / "doc" / "SKILL.md.tmpl",
+            "---\nname: doc\n# Doc\n\nSecond paragraph.\n\n---\n"
+            "preamble-tier: is the key that selects a bundle.\n",
+        )
+        with pytest.raises(TemplateError, match="not a frontmatter line"):
+            render_template(tmpl, skills_root)
+
+
 # ── Sections ───────────────────────────────────────────────────────────────
 
 
-def add_sections(skill_dir: Path, entries) -> None:
+def add_sections(skill_dir: Path, entries, *, create_files: bool = True) -> None:
     write(
         skill_dir / "sections" / "manifest.json",
         json.dumps({"skill": skill_dir.name, "sections": entries}),
     )
+    if create_files:
+        for entry in entries:
+            if entry.get("file"):
+                write(skill_dir / "sections" / entry["file"], f"# {entry['id']}\n")
 
 
 class TestSections:
@@ -189,6 +270,44 @@ class TestSections:
         )
         write(tmpl.parent / "sections" / "triage.md", "SECRET BODY TEXT\n")
         assert "SECRET BODY TEXT" not in render_template(tmpl, skills_root)
+
+    def test_manifest_pointing_at_a_missing_file_is_rejected(self, skills_root):
+        # A STOP pointer the agent cannot follow is a step that silently stops
+        # happening: the skill forbids working from the summary, and the file
+        # it names is not there.
+        tmpl = make_skill(skills_root, "carved", "{{SECTION:triage}}\n")
+        add_sections(
+            tmpl.parent,
+            [{"id": "triage", "file": "triage.md", "trigger": "starting triage"}],
+            create_files=False,
+        )
+        with pytest.raises(TemplateError, match="does not exist"):
+            render_template(tmpl, skills_root)
+
+    def test_section_generated_from_its_own_template_satisfies_the_pointer(
+        self, skills_root
+    ):
+        # On a skill's first build only sections/<f>.md.tmpl exists; the
+        # generated body arrives later in the same run.
+        tmpl = make_skill(skills_root, "carved", "{{SECTION:triage}}\n")
+        add_sections(
+            tmpl.parent,
+            [{"id": "triage", "file": "triage.md", "trigger": "starting triage"}],
+            create_files=False,
+        )
+        write(tmpl.parent / "sections" / "triage.md.tmpl", "Body.\n")
+        assert "sections/triage.md" in render_template(tmpl, skills_root)
+
+    def test_section_file_must_be_a_bare_name(self, skills_root):
+        # entry["file"] is rendered into a path the agent is told to load.
+        tmpl = make_skill(skills_root, "carved", "{{SECTION:triage}}\n")
+        add_sections(
+            tmpl.parent,
+            [{"id": "triage", "file": "../../escape.md", "trigger": "t"}],
+            create_files=False,
+        )
+        with pytest.raises(TemplateError, match="bare file name"):
+            render_template(tmpl, skills_root)
 
     def test_index_renders_a_row_per_section(self, skills_root):
         tmpl = make_skill(skills_root, "carved", "{{SECTION_INDEX}}\n")
@@ -278,6 +397,64 @@ class TestSections:
         assert "Owned by carved." in render_template(section_tmpl, skills_root)
 
 
+    def test_duplicate_section_ids_are_rejected(self, skills_root):
+        # Only the first is ever pointed at, so the reachability guard cannot
+        # see that the second is stranded.
+        tmpl = make_skill(skills_root, "carved", "{{SECTION:a}}\n")
+        add_sections(
+            tmpl.parent,
+            [
+                {"id": "a", "file": "first.md", "trigger": "t1"},
+                {"id": "a", "file": "second.md", "trigger": "t2"},
+            ],
+        )
+        with pytest.raises(TemplateError, match="duplicate section id"):
+            render_template(tmpl, skills_root)
+
+    @pytest.mark.parametrize(
+        "sections",
+        [
+            "not-a-list",
+            ["a string"],
+            [None],
+            [{"id": 1, "file": "a.md", "trigger": "t"}],
+        ],
+    )
+    def test_malformed_manifest_raises_template_error_not_a_traceback(
+        self, skills_root, sections
+    ):
+        tmpl = make_skill(skills_root, "carved", "{{SECTION:a}}\n")
+        write(
+            tmpl.parent / "sections" / "manifest.json",
+            json.dumps({"skill": "carved", "sections": sections}),
+        )
+        with pytest.raises(TemplateError):
+            render_template(tmpl, skills_root)
+
+    def test_manifest_text_is_not_re_scanned_as_a_placeholder(self, skills_root):
+        tmpl = make_skill(skills_root, "carved", "{{SECTION:a}}\n")
+        add_sections(
+            tmpl.parent,
+            [{"id": "a", "file": "a.md", "trigger": "before {{SNIPPET:greeting}}"}],
+        )
+        with pytest.raises(TemplateError, match=r"containing"):
+            render_template(tmpl, skills_root)
+
+    def test_section_index_escapes_pipes_and_newlines(self, skills_root):
+        tmpl = make_skill(skills_root, "carved", "{{SECTION_INDEX}}\n")
+        add_sections(
+            tmpl.parent,
+            [{"id": "a", "file": "a.md", "trigger": "when x | y\nhappens"}],
+        )
+        out = render_template(tmpl, skills_root)
+        row = [ln for ln in out.splitlines() if "sections/a.md" in ln][0]
+        # The newline is folded away, so the row survives as one line...
+        assert "when x" in row and "happens" in row
+        # ...and the literal pipe is escaped so it cannot end the cell early.
+        assert "\\|" in row
+        assert row.count("|") - row.count("\\|") == 3  # exactly three cell walls
+
+
 # ── Composition ────────────────────────────────────────────────────────────
 
 
@@ -336,6 +513,15 @@ class TestResolution:
         tmpl = make_skill(skills_root, "s", "{{NOT_A_THING}}\n")
         with pytest.raises(TemplateError, match="unknown placeholder"):
             render_template(tmpl, skills_root)
+
+    def test_inline_code_examples_of_the_syntax_do_not_break_the_build(
+        self, skills_root
+    ):
+        # Documentation about this very syntax must be writable in a skill.
+        tmpl = make_skill(
+            skills_root, "s", "Write `{{ section }}` to point at a step.\n"
+        )
+        assert "{{ section }}" in render_template(tmpl, skills_root)
 
     def test_shell_expansions_are_not_mistaken_for_placeholders(self, skills_root):
         # Skills are full of ${VAR} and $(cmd); only {{SCREAMING_SNAKE}} is ours.
@@ -426,6 +612,33 @@ class TestRenderAll:
         make_skill(skills_root, "a", "# A\n")
         render_all(skills_root)
         assert check_templates(skills_root) == []
+
+    def test_orphaned_generated_file_is_reported(self, skills_root):
+        # Deleting a template used to un-gate the file it produced: nothing
+        # compared it to anything, while it still said "do not edit directly".
+        tmpl = make_skill(skills_root, "a", "# A\n")
+        render_all(skills_root)
+        generated = tmpl.parent / "SKILL.md"
+        tmpl.unlink()
+
+        assert check_templates(skills_root) == []  # template-driven check is blind
+        assert find_orphaned_generated(skills_root) == [generated]
+
+    def test_a_hand_owned_skill_md_is_not_an_orphan(self, skills_root):
+        # Only files carrying the generated banner are claimed by the renderer.
+        write(skills_root / "cat" / "plain" / "SKILL.md", "---\nname: plain\n---\n\n# Plain\n")
+        assert find_orphaned_generated(skills_root) == []
+
+    def test_prose_mentioning_the_banner_is_not_an_orphan(self, skills_root):
+        # The banner is a header, not a phrase: a hand-authored skill that
+        # merely discusses it must not fail CI with "restore the template".
+        write(
+            skills_root / "cat" / "mentions" / "SKILL.md",
+            "---\nname: mentions\n---\n\n# Docs\n\n"
+            "Generated files carry an `AUTO-GENERATED from` banner; do not "
+            "edit them by hand.\n",
+        )
+        assert find_orphaned_generated(skills_root) == []
 
     def test_render_text_is_usable_standalone(self, skills_root):
         tmpl = make_skill(skills_root, "a", "body\n")
