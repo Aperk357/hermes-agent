@@ -38,6 +38,13 @@ skills/
 │       ├── SKILL.md
 │       ├── scripts/
 │       └── references/
+├── github/
+│   └── github-issues/
+│       ├── SKILL.md              # Generated — do not edit directly
+│       └── SKILL.md.tmpl         # Optional: the source (see below)
+├── _shared/                      # Build-time inputs, never loaded as a skill
+│   ├── snippets/                 # Prose or code shared by several skills
+│   └── preamble/manifest.json    # Named bundles of snippets
 └── ...
 ```
 
@@ -327,6 +334,127 @@ Run the skill and verify the agent follows the instructions correctly:
 ```bash
 hermes chat --toolsets skills -q "Use the X skill to do Y"
 ```
+
+## Sharing Prose Between Skills (`SKILL.md.tmpl`)
+
+Most skills are a plain `SKILL.md`. Write one and stop reading here.
+
+Reach for a template when **several skills need the same block of text**. Four
+of the `skills/github/*` skills each carried their own copy of the same
+twenty-line auth-resolution snippet, and the copies had already drifted — one
+grew a debug `echo`, another moved a step to a different section. A bug fixed
+in one stayed broken in the other three, because nobody edits four files when
+they fix one.
+
+Such a skill is authored as `SKILL.md.tmpl` with `{{PLACEHOLDER}}` tokens and
+rendered into the `SKILL.md` that ships:
+
+```bash
+hermes skills render          # regenerate every SKILL.md from its template
+hermes skills render --check  # report drift without writing (what CI runs)
+```
+
+**Both files are committed.** Nothing renders at install time or at agent
+time — the runtime keeps reading plain markdown. CI fails if a committed
+`SKILL.md` no longer matches its template, so a direct edit to a generated
+file cannot merge.
+
+### Placeholders
+
+| Placeholder | Expands to |
+|---|---|
+| `{{SNIPPET:id}}` | The contents of `skills/_shared/snippets/<id>.md` |
+| `{{PREAMBLE}}` | Every snippet in the bundle named by `preamble-tier` |
+| `{{SECTION:id}}` | A pointer telling the agent to load one section file |
+| `{{SECTION_INDEX}}` | A "when → section" table built from the manifest |
+| `{{INVOKE_SKILL:name}}` | Prose handing control to another skill and back |
+| `{{SKILL_NAME}}` | The skill's own name |
+
+Only `{{SCREAMING_SNAKE}}` is a placeholder, so ordinary `${VAR}` and `$(cmd)`
+in shell blocks are left alone. An unknown placeholder, a missing snippet, or
+a snippet that includes itself fails the render rather than shipping a
+half-expanded file.
+
+### Sharing a snippet
+
+A snippet is inlined verbatim, so store exactly the text that should appear.
+Shared *shell* is stored without code fences — each skill drops it into its
+own fence alongside its own lines, which is how four skills share one block
+and still read in their own voice:
+
+````markdown
+### Setup
+
+```bash
+{{SNIPPET:github-auth-detect}}
+echo "Using: $AUTH"
+```
+````
+
+When the same *set* of snippets recurs, name the bundle in the frontmatter
+instead:
+
+````markdown
+---
+name: github-issues
+preamble-tier: github-api
+---
+
+### Setup
+
+```bash
+{{PREAMBLE}}
+```
+````
+
+`preamble-tier` is a build-only key — the renderer strips it from the shipped
+file, because the runtime does not read it.
+
+Only share text that is genuinely used twice. A snippet with one caller is
+indirection, not deduplication, and a test enforces this.
+
+### Carving a long skill into sections
+
+`references/` holds background material the agent may want. `sections/` holds
+**steps it must execute**, and exists for the same reason: keeping text out of
+the prompt until it is needed. A carved skill's `SKILL.md` is a decision tree
+that points at one file per step.
+
+Declare them in `sections/manifest.json`:
+
+```json
+{
+  "skill": "my-skill",
+  "sections": [
+    {
+      "id": "triage",
+      "file": "triage.md",
+      "trigger": "starting triage (only when the run failed)"
+    }
+  ]
+}
+```
+
+Then `{{SECTION:triage}}` renders a pointer naming the exact call to make:
+
+```markdown
+> **STOP.** Before starting triage (only when the run failed), load this
+> step's instructions:
+> `skill_view("my-skill", file_path="sections/triage.md")`
+> Execute it in full. Do not work from the summary above — that file is the
+> source of truth for this step.
+```
+
+The manifest is a passive registry: it records where each section lives and
+when it applies. The skill body remains the only thing that decides control
+flow, so a conditional step's text never enters the prompt on a run where the
+condition does not hold.
+
+Section files may themselves be templates (`sections/triage.md.tmpl`); they
+render with their parent skill's context, so `{{SKILL_NAME}}` inside one
+resolves to the owning skill rather than to `sections`.
+
+See `skills/_shared/README.md` for the authoring checklist.
 
 ## Where Should the Skill Live?
 

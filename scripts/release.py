@@ -45,6 +45,9 @@ ACP_REGISTRY_MANIFEST = REPO_ROOT / "acp_registry" / "agent.json"
 
 # Auto-extracted from noreply emails + manual overrides
 AUTHOR_MAP = {
+    "pdv@local": "Aperk357",  # placeholder local git identity used on pdv/main by repo owner Aperk357 (PDV90 display name); real author confirmed via commit content and repo ownership
+    "you@example.com": "Aperk357",  # placeholder local git identity ("Your Name") used on pdv/main by repo owner Aperk357; real author confirmed via commit content and repo ownership
+    "andreperkins@verizon.net": "Aperk357",  # real git identity used by repo owner Aperk357 on feature/route-lease-pdv-wiring (PR #4); confirmed via git log author on the branch's own commits
     "huanshan5195@users.noreply.github.com": "huanshan5195",  # PR #57601 salvage (custom-provider: emit reasoning_effort at the live CustomProfile path so GLM-5.2/ARK/vLLM/Ollama endpoints receive it; + "max" reasoning level)
     "infinitycrew39@gmail.com": "infinitycrew39",  # PR #56431 salvage (honor live vLLM context limits on local endpoints)
     "jonathan.kovacs999@gmail.com": "CocaKova",  # PR #57692 salvage (cron: run jobs under the profile secret scope so get_secret does not fail-close with UnscopedSecretError under profile isolation)

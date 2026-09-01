@@ -1,0 +1,64 @@
+name: Skill template check
+
+# Verify every generated SKILL.md still matches its SKILL.md.tmpl.
+#
+# A skill that shares prose with other skills is authored as SKILL.md.tmpl
+# with {{PLACEHOLDER}} tokens; `hermes skills render` expands them into the
+# SKILL.md that ships. Both files are committed, which creates exactly one
+# failure mode worth a blocking check: someone edits the generated SKILL.md
+# directly. That edit works — until the next person runs the renderer and
+# silently reverts it.
+#
+# This check makes that impossible to merge. It is also what lets the rest of
+# the repo keep treating SKILL.md as an ordinary committed file: no render
+# step at install time, no render step at agent time.
+#
+# Runs unconditionally (like the uv.lock check) rather than behind the
+# `python` change lane — a PR that only touches skills/_shared/ or a .tmpl is
+# exactly the PR that can break this, and it need not touch any .py file.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skill-template-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: SKILL.md freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # `python -m tools.skill_template` rather than `hermes skills render`:
+      # the renderer is pure stdlib, so the gate needs no dependency install
+      # and cannot fail for reasons unrelated to what it is checking.
+      - name: Verify generated SKILL.md files are up to date
+        run: |
+          if ! python3 -m tools.skill_template --check; then
+            cat <<'SUMMARY' >> "$GITHUB_STEP_SUMMARY"
+          ## ❌ A generated `SKILL.md` is out of date
+
+          These files are generated from `SKILL.md.tmpl` — editing the
+          generated file directly works right up until someone runs the
+          renderer and reverts it.
+
+          Edit the template (or the shared snippet under `skills/_shared/`),
+          then regenerate and commit both files:
+
+          ```bash
+          hermes skills render        # or: python3 -m tools.skill_template
+          git add skills/
+          ```
+
+          See `skills/_shared/README.md` for the placeholder reference.
+          SUMMARY
+            echo "::error title=Stale SKILL.md::Run \`hermes skills render\` and commit the result."
+            exit 1
+          fi

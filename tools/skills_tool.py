@@ -1223,6 +1223,7 @@ def skill_view(
                 # List available files in the skill directory, organized by type
                 available_files = {
                     "references": [],
+                    "sections": [],
                     "templates": [],
                     "assets": [],
                     "scripts": [],
@@ -1235,6 +1236,8 @@ def skill_view(
                         rel = str(f.relative_to(skill_dir))
                         if rel.startswith("references/"):
                             available_files["references"].append(rel)
+                        elif rel.startswith("sections/"):
+                            available_files["sections"].append(rel)
                         elif rel.startswith("templates/"):
                             available_files["templates"].append(rel)
                         elif rel.startswith("assets/"):
@@ -1306,8 +1309,10 @@ def skill_view(
         # Reuse the parse from the platform check above
         frontmatter = parsed_frontmatter
 
-        # Get reference, template, asset, and script files if this is a directory-based skill
+        # Get reference, section, template, asset, and script files if this is
+        # a directory-based skill
         reference_files = []
+        section_files = []
         template_files = []
         asset_files = []
         script_files = []
@@ -1318,6 +1323,16 @@ def skill_view(
                 reference_files = [
                     str(f.relative_to(skill_dir)) for f in references_dir.glob("*.md")
                 ]
+
+            # sections/ — on-demand steps of a carved skill. The SKILL.md holds
+            # the decision tree and points here per step, so a step's prose only
+            # enters the prompt when that step applies. manifest.json is the
+            # renderer's registry, not something the agent reads.
+            sections_dir = skill_dir / "sections"
+            if sections_dir.exists():
+                section_files = sorted(
+                    str(f.relative_to(skill_dir)) for f in sections_dir.glob("*.md")
+                )
 
             templates_dir = skill_dir / "templates"
             if templates_dir.exists():
@@ -1367,6 +1382,8 @@ def skill_view(
         linked_files = {}
         if reference_files:
             linked_files["references"] = reference_files
+        if section_files:
+            linked_files["sections"] = section_files
         if template_files:
             linked_files["templates"] = template_files
         if asset_files:
@@ -1473,7 +1490,7 @@ def skill_view(
             "path": rel_path,
             "skill_dir": str(skill_dir) if skill_dir else None,
             "linked_files": linked_files if linked_files else None,
-            "usage_hint": "To view linked files, call skill_view(name, file_path) where file_path is e.g. 'references/api.md' or 'assets/config.yaml'"
+            "usage_hint": "To view linked files, call skill_view(name, file_path) where file_path is e.g. 'references/api.md', 'sections/triage.md', or 'assets/config.yaml'"
             if linked_files
             else None,
             "required_environment_variables": required_env_vars,
@@ -1600,7 +1617,7 @@ SKILLS_LIST_SCHEMA = {
 
 SKILL_VIEW_SCHEMA = {
     "name": "skill_view",
-    "description": "Skills allow for loading information about specific tasks and workflows, as well as scripts and templates. Load a skill's full content or access its linked files (references, templates, scripts). First call returns SKILL.md content plus a 'linked_files' dict showing available references/templates/scripts. To access those, call again with file_path parameter.",
+    "description": "Skills allow for loading information about specific tasks and workflows, as well as scripts and templates. Load a skill's full content or access its linked files (references, templates, scripts). First call returns SKILL.md content plus a 'linked_files' dict showing available references/sections/templates/scripts. To access those, call again with file_path parameter.",
     "parameters": {
         "type": "object",
         "properties": {

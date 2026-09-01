@@ -114,10 +114,16 @@ Skills use a token-efficient loading pattern:
 ```
 Level 0: skills_list()           → [{name, description, category}, ...]   (~3k tokens)
 Level 1: skill_view(name)        → Full content + metadata       (varies)
-Level 2: skill_view(name, path)  → Specific reference file       (varies)
+Level 2: skill_view(name, path)  → Specific reference or section file  (varies)
 ```
 
 The agent only loads the full skill content when it actually needs it.
+
+A long skill can push Level 2 further by splitting its steps into `sections/`.
+Its `SKILL.md` then holds the decision tree and points at one file per step, so
+a step's instructions only enter the prompt on a run where that step actually
+applies. `references/` holds background material; `sections/` holds steps the
+agent executes.
 
 ## SKILL.md Format
 
@@ -268,6 +274,7 @@ See [Skill Settings](/user-guide/configuration#skill-settings) and [Creating Ski
 │   ├── axolotl/
 │   │   ├── SKILL.md               # Main instructions (required)
 │   │   ├── references/            # Additional docs
+│   │   ├── sections/              # On-demand steps of a carved skill
 │   │   ├── templates/             # Output formats
 │   │   ├── scripts/               # Helper scripts callable from the skill
 │   │   └── assets/                # Supplementary files

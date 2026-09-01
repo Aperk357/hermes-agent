@@ -30,6 +30,10 @@ EXCLUDED_SKILL_DIRS = frozenset(
         ".github",
         ".hub",
         ".archive",
+        # Build-time inputs for ``hermes skills render`` (shared snippets and
+        # the preamble tier map). Their content reaches the agent already
+        # inlined into each generated SKILL.md, never as a skill of its own.
+        "_shared",
         ".venv",
         "venv",
         "node_modules",
@@ -47,7 +51,15 @@ EXCLUDED_SKILL_DIRS = frozenset(
 # skill_view(skill, file_path=...). They are not standalone skills and must not
 # be scanned for active SKILL.md/DESCRIPTION.md entries, even if a Curator or
 # archive workflow preserves a complete old skill package under references/.
-SKILL_SUPPORT_DIRS = frozenset(("references", "templates", "assets", "scripts"))
+#
+# ``sections/`` holds the on-demand steps of a carved skill: the SKILL.md keeps
+# the decision tree and points at a section file for each step, so a step's
+# prose only enters the prompt when that step actually applies. Same
+# progressive-disclosure contract as references/, for instructions the agent
+# executes rather than background material.
+SKILL_SUPPORT_DIRS = frozenset(
+    ("references", "templates", "assets", "scripts", "sections")
+)
 
 
 def is_excluded_skill_path(path) -> bool:
