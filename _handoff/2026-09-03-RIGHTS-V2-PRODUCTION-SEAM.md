@@ -1,7 +1,32 @@
 # RIGHTS_V2 Production Seam Checkpoint
 **Date:** 2026-09-03
 **Workstream:** FACELESS_RIGHTS_V2_TO_TERMINAL_AND_CTC_HANDOFF_V1
-**State:** PRODUCTION_SEAM_WIRED — pending CI + NON-CLAUDE distinct integration
+**Source repo of the work described below:** `Aperk357/Faceless-Video` (NOT this repo, `Aperk357/hermes-agent`). This file is a governance checkpoint stored here for cross-project tracking; none of the commits, PRs, or file paths below exist in hermes-agent. See `PROVENANCE UPDATE` below for verification and current status.
+**State (at original write time):** PRODUCTION_SEAM_WIRED — pending CI + NON-CLAUDE distinct integration
+
+---
+
+## PROVENANCE UPDATE (2026-09-03, added during independent reconciliation)
+
+An independent review flagged this checkpoint because, read in isolation inside
+`hermes-agent`, it does not state which repository the referenced commits and
+PRs belong to. Reconciliation against live GitHub source (not prose) found:
+
+- All SHAs below (`b583c8917d`, `1510f5b`, `7310a24`, `775bd99`, `04af173`) resolve
+  exactly, with matching commit messages, in `Aperk357/Faceless-Video` — **not**
+  in `hermes-agent`. STATUS: VALID, WRONG-REPO-IMPLIED (now corrected above).
+- PR #64 and PR #65 referenced below are `Aperk357/Faceless-Video#64` and `#65`,
+  not any PR in this repo (this repo's own PRs are numbered separately).
+- PR #65 has since **merged**: `2ff27e99b933a29025b958e5dfa02900b1a8691c`, confirmed
+  as current `Faceless-Video` `main` HEAD.
+- Per `Aperk357/Nightwatch` checkpoint `NW-CHK-FACELESS-RIGHTS-V2-PR65-RECONCILE-COLLISION-2026-09-03`
+  (superseding the gate values in the table below): **`RIGHTS_V2_TERMINAL = TRUE`**
+  and **`CTC_HANDOFF_READY = TRUE`** as of the postmerge readback recorded there.
+  The `BLOCKED_RIGHTS_REMAINS=true` / `RIGHTS_V2_TERMINAL=false` table below reflects
+  the state at the time this file was originally written and is now stale — kept
+  verbatim for forensic history, not as current status.
+- The `videoEngine` gap noted at the bottom of this file is still open per that
+  same Nightwatch record and remains accurate.
 
 ---
 
