@@ -83,5 +83,16 @@
 | POST /api/video-engine/batch | server/routes/videoEngine.ts | Static analysis — undisclosed sibling of disclosed /generate gap |
 | POST /render-jobs dead-letter retry | server/routes/renderJobs.ts | Static P1 — re-enqueues without rights re-eval |
 
-Current lease bounded_scope does NOT cover any of these route files. Lease amendment required before code changes.
-Lease expires: 2026-09-03T13:24:29Z (ACTIVE, ~6h remaining at detection time)
+Current lease bounded_scope does NOT cover any of these route files. New lease required before code changes.
+
+## Lease status (re-read 2026-09-03 live)
+
+- Lease `COS-LEASE-FACELESS-RIGHTS-CONSENT-V2-002-20260903`: **EXPIRED** at `2026-09-03T13:24:29Z`
+- Scope amendment for bypass route files: **NOT RECORDED** before expiry
+- No second amendment entry exists in Nightwatch for batchExport.ts / publish.ts / video_flow.ts / videoEngine.ts / localRender.ts / renderJobs.ts dead-letter
+- bounded_scope remains the original 6 files only
+- **NEXT_ACTION=BLOCKED_ON_HUMAN**: Aperk357 must issue a new lease (or explicit /goal authorization) covering the P0-A bypass route files before Claude may write enforcement code to those files
+
+## RIGHTS_V2_TERMINAL status
+
+`RIGHTS_V2_TERMINAL=false` — P0-A bypass-route blocker open, lease expired, NON-CLAUDE review and merge pending.
