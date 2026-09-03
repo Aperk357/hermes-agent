@@ -4481,6 +4481,20 @@ def run_conversation(
                                 retry_count = 0
                                 compression_attempts = 0
                                 _retry.primary_recovery_attempted = False
+                                # A prior continuation attempt earlier in this same
+                                # turn may have set this flag; unlike its sibling
+                                # restart_with_* flags it is never cleared at its
+                                # own consumption site, so it stays stale for the
+                                # rest of the turn. restart_with_rebuilt_messages
+                                # is checked first and wins this iteration, but a
+                                # stale restart_with_length_continuation would
+                                # incorrectly intercept the very next iteration —
+                                # including a clean, immediate success from the
+                                # fallback provider — as if it still needed a
+                                # continuation retry. Clear it explicitly so the
+                                # fallback provider's first response is evaluated
+                                # on its own merits.
+                                _retry.restart_with_length_continuation = False
                                 _retry.restart_with_rebuilt_messages = True
                                 break
 

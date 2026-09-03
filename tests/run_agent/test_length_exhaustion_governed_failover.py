@@ -308,6 +308,56 @@ class TestLengthExhaustionGovernedFailover:
         )
         assert result.get("partial") is not True
 
+    def test_fallback_first_response_is_not_intercepted_by_stale_continuation_flag(self, loop_agent):
+        """NEGATIVE CONTROL I — kills the 'leave restart_with_length_continuation
+        dirty' mutant (independent-review finding, not in the original mutation
+        table above).
+
+        ``_retry.restart_with_length_continuation`` is set True by the sibling
+        continuation branch on each of the (up to 4) pre-ceiling truncations,
+        but — unlike ``restart_with_rebuilt_messages``, ``restart_with_compressed_
+        messages`` and ``restart_with_redirected_messages`` — it was never reset
+        at its own consumption site. Before the governed-failover branch existed,
+        that staleness was unreachable: budget exhaustion without a fallback just
+        returned. This branch is what first makes a subsequent outer-loop
+        iteration reachable after the flag was set earlier in the same turn.
+
+        If the branch does not also clear the flag, the very first response from
+        the fallback provider — even a completely clean, immediate success with
+        no truncation at all — would be misread by the stale check as still
+        needing a continuation retry, discarding the good response and issuing
+        an unnecessary extra API call instead of returning it.
+
+        This control uses a fallback response that is unambiguously terminal
+        (``finish_reason="stop"``, real content) and asserts both the API-call
+        count and the returned content, not just ``completed``: an extra
+        superfluous call after the real one is only visible by counting calls,
+        not by re-checking ``completed`` — the original core control does not
+        catch this.
+        """
+        from tests.run_agent.test_run_agent import _mock_response
+
+        recovery = _mock_response(
+            content="Completed on the fallback provider.", finish_reason="stop",
+        )
+        scripted = [
+            *[_length_stub(f"part {i} ") for i in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)],
+            recovery,
+        ]
+        loop_agent.client.chat.completions.create.side_effect = scripted
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            result = _run(loop_agent, "write me a very long document")
+
+        assert loop_agent.client.chat.completions.create.call_count == len(scripted), (
+            "The fallback provider's clean, immediate success must be accepted "
+            "as-is — a stale restart_with_length_continuation flag would discard "
+            f"it and issue at least one more call. Expected exactly {len(scripted)} "
+            f"API calls, got {loop_agent.client.chat.completions.create.call_count}."
+        )
+        assert result["completed"] is True
+        assert result["final_response"] == "Completed on the fallback provider."
+
     def test_content_filter_path_still_escalates_first_pass(self, loop_agent):
         """Guards the adjacent precedent against regression: a content-filtered
         stub must STILL escalate on the first pass with zero retries burned.
