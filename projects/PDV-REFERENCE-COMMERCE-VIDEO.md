@@ -3,23 +3,44 @@
 **Project:** Faceless Video (PDV) RightsAndConsent V2 production enforcement
 **Repo:** Aperk357/Faceless-Video, branch: claude/rights-and-consent-v2-complete-v1
 
-## Commit chain
+## Commit chain (current head: 72201dc)
 
-| SHA | Description |
-|---|---|
-| b583c89 | PR #64 squash-landed: R1 + R5 (attested source authority) |
-| 5af20a1 | R2/R3/R4 + binding (contract layer) |
-| 59f493d | R1+R5 duplicate (squash conflict origin) |
-| 1510f5b | Merge reconcile onto main after PR #64 |
-| 7310a24 | NON-CLAUDE review fix: re-derive eligibility at verify time |
-| 775bd99 | Production seam wiring: POST /render-jobs enforcement |
-| 04af173 | Merge + push HEAD (current) |
+| SHA | Description | Author |
+|---|---|---|
+| b583c89 | PR #64 squash-landed: R1 + R5 (attested source authority) | Claude |
+| 5af20a1 | R2/R3/R4 + binding (contract layer) | Claude |
+| 59f493d | R1+R5 duplicate (squash conflict origin) | Claude |
+| 1510f5b | Merge reconcile onto main after PR #64 | Claude |
+| 7310a24 | NON-CLAUDE review fix: re-derive eligibility at verify time | Aperk357 |
+| 775bd99 | Production seam wiring: POST /render-jobs enforcement | Claude |
+| 04af173 | Merge + push HEAD | Claude |
+| 22da7cf | fix(audit): declare the Rights V2 denial actions in AuditAction | Aperk357 |
+| cf23010 | fix(rights): close P1 (evidence-bound consent) + P2 (causal negatives) | Aperk357 |
+| 9a9201c | fix(rights): reconcile production seam onto evidence-bound consent (P1) | Aperk357 |
+| 40f5dd7 | chore: dedupe AuditAction literals after rebase onto 22da7cf | Aperk357 |
+| 5e329cc | Fix TypeScript errors: add rights-denial AuditAction members; close P1 unreachable guards | Claude |
+| Merge | Merge remote 40f5dd7 into local (resolved duplicate AuditAction + fixture shape) | Claude |
+| 42d07fb | fix(tests): update P1 fixtures to match discriminated-union consent schema | Claude |
+| 72201dc | chore: remove duplicate AuditAction literals from merge | Claude |
 
 ## PR #65 state
 
 - PR URL: Aperk357/Faceless-Video#65
-- Head: 04af173
-- Status: open, awaiting CI + NON-CLAUDE distinct integration
+- Head: 72201dc
+- CI: GREEN (check_suite.completed, no failures)
+- Vercel: DEPLOYED
+- Status: open, awaiting NON-CLAUDE exact-head review at 72201dc + merge
+
+## Lane collision record
+
+- collision_event: 1510f5b, 775bd99+04af173 pushed outside bounded lease
+- collision_event_2: 22da7cf/cf23010/9a9201c/40f5dd7 (Aperk357) + 5e329cc (Claude) both fixed same CI failures
+- Resolution: Claude lane standing down; Aperk357 has declared branch ready for review
+
+## Net change from review-requested head (40f5dd7) to current head (72201dc)
+
+- `tests/contracts/referenceCommerceRightsV2.test.ts`: +25 lines — two P1 fixtures (P1-VOICE, P1-TRADEMARK) using evidence-bearing object shape. Redundant with Aperk357's P2 fixtures in second describe block; CI confirms no conflict.
+- `server/services/auditService.ts`: net zero change (duplicate entries removed)
 
 ## Contract completeness
 
@@ -31,13 +52,16 @@
 | R3: territory/purpose evaluated | DONE (PR #65) |
 | R4: verifyProvenanceReceipt fail-closed + rightsValue required | DONE (PR #65) |
 | Snapshot trust fix (re-derive at verify time) | DONE (7310a24, NON-CLAUDE) |
-| Production seam: POST /render-jobs requires rights | DONE (775bd99) |
+| P1 fix: consent/trademark as evidence-bearing objects | DONE (cf23010, Aperk357) |
+| P2 causal negatives: VOICE_CONSENT + TRADEMARK | DONE (cf23010 + 72201dc) |
+| Production seam: POST /render-jobs requires rights | DONE (775bd99 + 9a9201c) |
 | videoEngine path enforcement | OPEN (separate failure domain) |
 
 ## Terminal gates remaining
 
-- PR #65 CI green on 04af173
-- NON-CLAUDE distinct integration
-- Postmerge production-path proof
-- RIGHTS_V2_TERMINAL=true receipt
-- CTC_HANDOFF_READY=true after terminal proof
+- [x] CI green on PR #65 head — CONFIRMED (72201dc, check_suite.completed)
+- [ ] NON-CLAUDE exact-head review at 72201dc — PENDING (requested by Aperk357)
+- [ ] NON-CLAUDE distinct integration (merge) — PENDING
+- [ ] Postmerge production-path proof — PENDING (after merge)
+- [ ] RIGHTS_V2_TERMINAL=true receipt — PENDING
+- [ ] CTC_HANDOFF_READY=true — PENDING
