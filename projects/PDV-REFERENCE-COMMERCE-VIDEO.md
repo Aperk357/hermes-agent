@@ -64,9 +64,24 @@
 
 ## Terminal gates remaining
 
-- [x] CI green on PR #65 head — CONFIRMED (6d342e8, both gate jobs completed/success 2026-09-03T07:07 UTC)
-- [ ] NON-CLAUDE exact-head review at 6d342e8 — PENDING (blocker addressed; CI green; new review required per any-byte-change rule)
+- [x] CI green on PR #65 head — CONFIRMED (6d342e8, 2026-09-03T07:07 UTC)
+- [ ] Gate (3) API/UI cannot bypass it — OPEN: P0-A BLOCKER — /api/batch-export proven live (201, no rights enforcement); /api/v1/publish, /api/v1/video/generate*, /api/video-engine/batch via static; dead-letter retry P1
+- [ ] NON-CLAUDE exact-head review at new head (post-bypass-fix) — PENDING; round-2 review was at 72201dc by author (self-attested, not NON-CLAUDE separation of duties)
 - [ ] NON-CLAUDE distinct integration (merge) — PENDING
 - [ ] Postmerge production-path proof — PENDING (after merge)
 - [ ] RIGHTS_V2_TERMINAL=true receipt — PENDING
 - [ ] CTC_HANDOFF_READY=true — PENDING
+
+## P0-A bypass-route blocker (found 2026-09-03T07:18 UTC, round-2 adversarial review)
+
+| Route | File | Evidence |
+|---|---|---|
+| POST /api/batch-export | server/routes/batchExport.ts | PROVEN LIVE — 201, real enqueueRenderJob, zero rights enforcement possible |
+| POST /api/v1/publish | server/routes/publish.ts | Static analysis — .strict() schema, zero rights refs, actual platform-publish action |
+| POST /api/v1/video/generate | server/routes/video_flow.ts | Static analysis |
+| POST /api/v1/video/generate_and_publish | server/routes/video_flow.ts | Static analysis |
+| POST /api/video-engine/batch | server/routes/videoEngine.ts | Static analysis — undisclosed sibling of disclosed /generate gap |
+| POST /render-jobs dead-letter retry | server/routes/renderJobs.ts | Static P1 — re-enqueues without rights re-eval |
+
+Current lease bounded_scope does NOT cover any of these route files. Lease amendment required before code changes.
+Lease expires: 2026-09-03T13:24:29Z (ACTIVE, ~6h remaining at detection time)
