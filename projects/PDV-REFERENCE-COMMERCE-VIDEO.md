@@ -1,7 +1,9 @@
 # PDV Reference Commerce Video — Workstream State
 
 **Project:** Faceless Video (PDV) RightsAndConsent V2 production enforcement
-**Repo:** Aperk357/Faceless-Video, branch: claude/rights-and-consent-v2-complete-v1
+**Repo:** Aperk357/Faceless-Video
+**PR #65 MERGED** — merge SHA: `2ff27e99b933a29025b958e5dfa02900b1a8691c` (2026-09-03T07:34:39Z, Aperk357)
+**LIVE_MAIN=2ff27e99b933a29025b958e5dfa02900b1a8691c**
 
 ## Commit chain (current head: 6d342e8)
 
@@ -72,10 +74,11 @@
 - [x] CI green on PR #65 head — CONFIRMED (6d342e8, 2026-09-03T07:07 UTC)
 - [ ] Gate (3) API/UI cannot bypass it — OPEN: P0-A BLOCKER — /api/batch-export proven live (201, no rights enforcement); /api/v1/publish, /api/v1/video/generate*, /api/video-engine/batch via static; dead-letter retry P1; re-confirmed at live head by Aperk357 07:21 UTC
 - [x] NON-CLAUDE exact-head review — SATISFIED (2026-09-03T07:23 UTC): Aperk357 PASS_EXACT_HEAD at 6d342e8; within PR #65 bounded scope; NO_MERGE_AUTHORITY stated
-- [ ] NON-CLAUDE distinct integration (merge) — PENDING: Aperk357 review passed but "does not authorize self-merge" — Aperk357 (owner) must merge; Claude must NOT merge
-- [ ] Postmerge production-path proof — PENDING (after merge)
+- [x] NON-CLAUDE distinct integration (merge) — DONE: Aperk357 merged PR #65 at 07:34:39Z → main=2ff27e99
+- [ ] Postmerge production-path proof — PENDING (on main 2ff27e99)
 - [ ] Gate (3) bypass-route enforcement (successor PR) — PENDING: new lease required for batchExport.ts, publish.ts, video_flow.ts, videoEngine.ts, localRender.ts, renderJobs.ts dead-letter
 - [ ] Causal negatives for each bypass route — PENDING (after lease)
+- [ ] NON-CLAUDE review + merge of bypass-route PR — PENDING
 - [ ] RIGHTS_V2_TERMINAL=true receipt — PENDING
 - [ ] CTC_HANDOFF_READY=true — PENDING
 
@@ -102,4 +105,4 @@ Current lease bounded_scope does NOT cover any of these route files. New lease r
 
 ## RIGHTS_V2_TERMINAL status
 
-`RIGHTS_V2_TERMINAL=false` — P0-A bypass-route blocker open, lease expired, NON-CLAUDE review and merge pending.
+`RIGHTS_V2_TERMINAL=false` — PR #65 merged (2ff27e99). Remaining: postmerge proof on main, bypass-route enforcement (new lease required), bypass-route causal negatives, NON-CLAUDE review + merge of bypass PR, Nightwatch terminal receipt.
