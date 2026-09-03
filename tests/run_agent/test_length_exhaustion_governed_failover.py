@@ -1,0 +1,273 @@
+"""Causal controls for HERMES_LENGTH_EXHAUSTION_GOVERNED_FAILOVER_V1 (R5).
+
+Incident: Hermes surfaces ``Response remained truncated after 4 continuation
+attempts`` and the turn dies there, even when an authorised fallback route is
+configured and available.
+
+Traced cause (agent/conversation_loop.py, length-exhaustion ceiling exit): once
+the bounded continuation budget is spent, the loop ``return``s unconditionally.
+It never consults the fallback chain, so no governed failover decision is ever
+made for this class of failure.
+
+The precedent for the correct shape already exists in the same function: the
+content-filter branch (#32421) escalates via ``_try_activate_fallback()``, rolls
+history back to the last clean assistant turn, unmarks the continuation
+scaffolding and resets the counters. Its own comment records that the loop
+"used to give up with 'Response remained truncated after 3 continuation
+attempts' and never consult the fallback chain".
+
+The difference R5 must preserve: a content filter is content-deterministic, so
+that branch escalates BEFORE burning retries. Length exhaustion is not —
+continuations are genuinely productive — so failover belongs strictly AFTER the
+bounded budget is spent.
+
+These tests are deterministic: no provider tokens, no long generation.
+``_try_activate_fallback`` is patched, so the canonical selection authority is
+observed, never re-implemented here.
+"""
+
+from __future__ import annotations
+
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from hermes_constants import PARTIAL_STREAM_STUB_ID, FINISH_REASON_LENGTH
+
+
+# Budget is 4 continuation attempts; a 5th length response hits the ceiling.
+LENGTH_RESPONSES_TO_EXHAUST_BUDGET = 5
+
+
+@pytest.fixture()
+def loop_agent():
+    from run_agent import AIAgent
+    with (
+        patch("run_agent.get_tool_definitions", return_value=[]),
+        patch("run_agent.check_toolset_requirements", return_value={}),
+        patch("run_agent.OpenAI"),
+    ):
+        a = AIAgent(
+            api_key="test-key-1234567890",
+            base_url="https://openrouter.ai/api/v1",
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
+        )
+        a.client = MagicMock()
+        a._cached_system_prompt = "You are helpful."
+        a._use_prompt_caching = False
+        a.compression_enabled = False
+        a.save_trajectories = False
+        return a
+
+
+def _length_stub(content):
+    """A truncated response: finish_reason=length, NOT content-filtered.
+
+    Deliberately carries no ``_content_filter_terminated`` tag — that is the
+    adjacent path and must not be what rescues this one.
+    """
+    from tests.run_agent.test_run_agent import _mock_assistant_msg
+    return SimpleNamespace(
+        id=PARTIAL_STREAM_STUB_ID,
+        model="test/model",
+        choices=[SimpleNamespace(
+            index=0,
+            message=_mock_assistant_msg(content=content),
+            finish_reason=FINISH_REASON_LENGTH,
+        )],
+        usage=None,
+    )
+
+
+def _run(agent, message):
+    with (
+        patch.object(agent, "_persist_session"),
+        patch.object(agent, "_save_trajectory"),
+        patch.object(agent, "_cleanup_task_resources"),
+    ):
+        return agent.run_conversation(message)
+
+
+def _arm_fallback(agent, calls, *, succeeds=True):
+    """Install a counting stand-in for the canonical activation helper."""
+    agent._fallback_chain = [
+        {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.7"},
+    ]
+    agent._fallback_index = 0
+
+    def _fake_activate(reason=None):
+        calls["n"] += 1
+        if not succeeds:
+            return False
+        agent._fallback_index = len(agent._fallback_chain)
+        return True
+
+    return patch.object(agent, "_try_activate_fallback", side_effect=_fake_activate)
+
+
+class TestLengthExhaustionGovernedFailover:
+
+    def test_ceiling_activates_governed_fallback_exactly_once(self, loop_agent):
+        """CORE CONTROL (RED on the unmodified tree).
+
+        Budget exhausted + an authorised fallback available must produce
+        exactly ONE governed failover decision. Today it produces zero and the
+        turn terminates with the truncation error.
+        """
+        from tests.run_agent.test_run_agent import _mock_response
+
+        recovery = _mock_response(
+            content="Completed on the fallback provider.", finish_reason="stop",
+        )
+        loop_agent.client.chat.completions.create.side_effect = [
+            *[_length_stub(f"part {i} ") for i in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)],
+            recovery,
+        ]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            result = _run(loop_agent, "write me a very long document")
+
+        assert calls["n"] == 1, (
+            "Length exhaustion with an authorised fallback available must make "
+            "exactly one governed failover decision. "
+            f"Got {calls['n']}."
+        )
+        assert result.get("error") != (
+            "Response remained truncated after 4 continuation attempts"
+        ), "The turn must not terminate on the truncation error when a fallback exists."
+
+    def test_budget_remaining_does_not_failover_early(self, loop_agent):
+        """NEGATIVE CONTROL A — continuations are productive; do not escalate
+        before the bounded budget is actually spent."""
+        from tests.run_agent.test_run_agent import _mock_response
+
+        loop_agent.client.chat.completions.create.side_effect = [
+            _length_stub("first part "),
+            _mock_response(content="and the rest.", finish_reason="stop"),
+        ]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            result = _run(loop_agent, "write something")
+
+        assert calls["n"] == 0, (
+            "A single truncation with budget remaining must continue, not fail "
+            "over. Escalating here would burn the fallback on a recoverable turn."
+        )
+        assert result["completed"] is True
+
+    def test_no_authorised_alternate_fails_closed(self, loop_agent):
+        """NEGATIVE CONTROL B — with no fallback available the existing
+        terminal behaviour must be preserved exactly. Fail closed, never open."""
+        loop_agent.client.chat.completions.create.side_effect = [
+            _length_stub(f"part {i} ") for i in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)
+        ]
+        loop_agent._fallback_chain = []
+        loop_agent._fallback_index = 0
+        calls = {"n": 0}
+        with patch.object(loop_agent, "_try_activate_fallback",
+                          side_effect=lambda reason=None: calls.__setitem__("n", calls["n"] + 1) or False):
+            result = _run(loop_agent, "write me a very long document")
+
+        assert result.get("partial") is True
+        assert result.get("error") == (
+            "Response remained truncated after 4 continuation attempts"
+        ), "With no authorised alternate the turn must still terminate fail-closed."
+
+    def test_failed_activation_is_bounded_and_terminal(self, loop_agent):
+        """NEGATIVE CONTROL E — if activation itself declines (pin forbids
+        substitution, chain exhausted, route in cooldown), the turn must end
+        terminally and must NOT retry activation in a loop."""
+        loop_agent.client.chat.completions.create.side_effect = [
+            _length_stub(f"part {i} ") for i in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)
+        ]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls, succeeds=False):
+            result = _run(loop_agent, "write me a very long document")
+
+        assert calls["n"] <= 1, (
+            f"Activation must be attempted at most once at the ceiling; got {calls['n']}. "
+            "More than one is unbounded retry / recursive dispatch."
+        )
+        assert result.get("partial") is True, (
+            "A declined activation must fall through to the existing terminal "
+            "behaviour, not fail open and not recurse."
+        )
+
+    def test_rollback_leaves_no_duplicate_assistant_fragments(self, loop_agent):
+        """NEGATIVE CONTROL F — the rollback must not leave continuation
+        scaffolding or duplicated partial text in history."""
+        from tests.run_agent.test_run_agent import _mock_response
+
+        recovery = _mock_response(
+            content="Completed on the fallback provider.", finish_reason="stop",
+        )
+        loop_agent.client.chat.completions.create.side_effect = [
+            *[_length_stub(f"part {i} ") for i in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)],
+            recovery,
+        ]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            result = _run(loop_agent, "write me a very long document")
+
+        msgs = result["messages"]
+        leftovers = [
+            m for m in msgs
+            if isinstance(m, dict)
+            and (m.get("_length_continuation_fragment")
+                 or m.get("_length_continuation_nudge"))
+        ]
+        assert not leftovers, (
+            f"Continuation scaffolding survived the failover rollback: {leftovers}"
+        )
+
+    def test_session_identity_preserved_across_failover(self, loop_agent):
+        """NEGATIVE CONTROL G — failover must not fork or reset session identity."""
+        from tests.run_agent.test_run_agent import _mock_response
+
+        before = getattr(loop_agent, "session_id", None)
+        recovery = _mock_response(
+            content="Completed on the fallback provider.", finish_reason="stop",
+        )
+        loop_agent.client.chat.completions.create.side_effect = [
+            *[_length_stub(f"part {i} ") for i in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)],
+            recovery,
+        ]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            _run(loop_agent, "write me a very long document")
+
+        assert getattr(loop_agent, "session_id", None) == before, (
+            "Governed failover must preserve session/correlation identity."
+        )
+
+    def test_content_filter_path_still_escalates_first_pass(self, loop_agent):
+        """Guards the adjacent precedent against regression: a content-filtered
+        stub must STILL escalate on the first pass with zero retries burned.
+        R5 must not collapse the two paths into one."""
+        from tests.run_agent.test_run_agent import _mock_assistant_msg, _mock_response
+
+        filter_stub = SimpleNamespace(
+            id=PARTIAL_STREAM_STUB_ID,
+            model="minimax/MiniMax-M2.7",
+            choices=[SimpleNamespace(
+                index=0,
+                message=_mock_assistant_msg(content="Writing the file..."),
+                finish_reason=FINISH_REASON_LENGTH,
+            )],
+            usage=None,
+            _dropped_tool_names=["write_file"],
+            _content_filter_terminated=True,
+        )
+        recovery = _mock_response(
+            content="Done on the fallback provider.", finish_reason="stop",
+        )
+        loop_agent.client.chat.completions.create.side_effect = [filter_stub, recovery]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            result = _run(loop_agent, "write me a long file")
+
+        assert calls["n"] == 1
+        assert result["final_response"] == "Done on the fallback provider."
