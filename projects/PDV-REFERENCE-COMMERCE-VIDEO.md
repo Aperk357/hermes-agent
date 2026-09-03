@@ -30,9 +30,14 @@
 - PR URL: Aperk357/Faceless-Video#65
 - Head: 6d342e8
 - CI: GREEN (confirmed 2026-09-03T07:07 UTC — both gate jobs completed/success)
-- Status: open, BLOCKER addressed — awaiting NON-CLAUDE exact-head review at 6d342e8 + merge
-- Prior review (Aperk357, 72201dc): BLOCKER_COMMENT — stale-snapshot eligibility at POST /render-jobs gate
-- Fix (f2dadea + 6d342e8): evaluateRightsAndConsent(rightsInput, new Date()) replaces snapshot trust; N10 causal negative added; Prettier formatted
+- Status: open (draft), AWAITING NON-CLAUDE MERGE
+- Round-2 review (Aperk357, 72201dc): BLOCKER_COMMENT — stale-snapshot (addressed in f2dadea+6d342e8)
+- **GATE (5) SATISFIED** (2026-09-03T07:23 UTC): Aperk357 posted independent exact-head review at `6d342e8`:
+  - Verdict: PASS_EXACT_HEAD / P0-P3=0 WITHIN PR #65 BOUNDED SCOPE / NO_MERGE_AUTHORITY
+  - Confirms: evidence-refs enforcement, N10 stale-snapshot causal negative, re-derive at server time — all verified
+  - Notes: video-engine/generate gap remains separate failure domain (not promoted by this review)
+  - Note: "does not authorize self-merge" — Claude must NOT merge; Aperk357 (owner) holds merge authority
+- **P0-A RE-CONFIRMED at live head** (2026-09-03T07:21, Aperk357 COMMENT): publish.ts=0 rights refs, batchExport.ts=0 rights refs at 6d342e8; re-stated as entrypoint gap not covered by PR #65 bounded scope
 
 ## Lane collision record
 
@@ -65,10 +70,12 @@
 ## Terminal gates remaining
 
 - [x] CI green on PR #65 head — CONFIRMED (6d342e8, 2026-09-03T07:07 UTC)
-- [ ] Gate (3) API/UI cannot bypass it — OPEN: P0-A BLOCKER — /api/batch-export proven live (201, no rights enforcement); /api/v1/publish, /api/v1/video/generate*, /api/video-engine/batch via static; dead-letter retry P1
-- [ ] NON-CLAUDE exact-head review at new head (post-bypass-fix) — PENDING; round-2 review was at 72201dc by author (self-attested, not NON-CLAUDE separation of duties)
-- [ ] NON-CLAUDE distinct integration (merge) — PENDING
+- [ ] Gate (3) API/UI cannot bypass it — OPEN: P0-A BLOCKER — /api/batch-export proven live (201, no rights enforcement); /api/v1/publish, /api/v1/video/generate*, /api/video-engine/batch via static; dead-letter retry P1; re-confirmed at live head by Aperk357 07:21 UTC
+- [x] NON-CLAUDE exact-head review — SATISFIED (2026-09-03T07:23 UTC): Aperk357 PASS_EXACT_HEAD at 6d342e8; within PR #65 bounded scope; NO_MERGE_AUTHORITY stated
+- [ ] NON-CLAUDE distinct integration (merge) — PENDING: Aperk357 review passed but "does not authorize self-merge" — Aperk357 (owner) must merge; Claude must NOT merge
 - [ ] Postmerge production-path proof — PENDING (after merge)
+- [ ] Gate (3) bypass-route enforcement (successor PR) — PENDING: new lease required for batchExport.ts, publish.ts, video_flow.ts, videoEngine.ts, localRender.ts, renderJobs.ts dead-letter
+- [ ] Causal negatives for each bypass route — PENDING (after lease)
 - [ ] RIGHTS_V2_TERMINAL=true receipt — PENDING
 - [ ] CTC_HANDOFF_READY=true — PENDING
 
