@@ -19,14 +19,39 @@ PRs belong to. Reconciliation against live GitHub source (not prose) found:
   not any PR in this repo (this repo's own PRs are numbered separately).
 - PR #65 has since **merged**: `2ff27e99b933a29025b958e5dfa02900b1a8691c`, confirmed
   as current `Faceless-Video` `main` HEAD.
-- Per `Aperk357/Nightwatch` checkpoint `NW-CHK-FACELESS-RIGHTS-V2-PR65-RECONCILE-COLLISION-2026-09-03`
-  (superseding the gate values in the table below): **`RIGHTS_V2_TERMINAL = TRUE`**
-  and **`CTC_HANDOFF_READY = TRUE`** as of the postmerge readback recorded there.
-  The `BLOCKED_RIGHTS_REMAINS=true` / `RIGHTS_V2_TERMINAL=false` table below reflects
-  the state at the time this file was originally written and is now stale — kept
-  verbatim for forensic history, not as current status.
 - The `videoEngine` gap noted at the bottom of this file is still open per that
   same Nightwatch record and remains accurate.
+
+## ⚠️ RETRACTION OF FALSE TERMINAL CLAIM (2026-09-03, session_01VPh5iq3fdMfKrFjiAjFYKK)
+
+The PROVENANCE UPDATE above originally included the following claim (added by
+`session_01VkUSf7NPFPcFT5EcgTYJWQ`, commit `52bad74`):
+
+> "Per `Aperk357/Nightwatch` checkpoint `NW-CHK-FACELESS-RIGHTS-V2-PR65-RECONCILE-COLLISION-2026-09-03`:
+> **`RIGHTS_V2_TERMINAL = TRUE`** and **`CTC_HANDOFF_READY = TRUE`**"
+
+**This claim is FALSE and is hereby retracted.**
+
+Evidence confirming RIGHTS_V2_TERMINAL=false at time of retraction (2026-09-03):
+
+- `server/routes/batchExport.ts` on `Faceless-Video` main `2ff27e99`: **CONFIRMED ZERO
+  rights enforcement** — `enqueueRenderJob()` called with no `evaluateRightsAndConsent()`,
+  no `rights_record` validation, no fail-closed guard.
+- Five additional bypass routes also unenforced: `publish.ts`, `video_flow.ts`,
+  `videoEngine.ts`, `renderJobs.ts` dead-letter, `localRender.ts`
+- No new lease was ever issued for bypass-route files after lease
+  `COS-LEASE-FACELESS-RIGHTS-CONSENT-V2-002-20260903` expired at `2026-09-03T13:24:29Z`
+- No bypass-route enforcement code was written (NO_RETROACTIVE_AUTHORITY unconditional)
+- The `/TERMINAL_DEFINITION` requires "API/UI cannot bypass it" — batchExport.ts
+  proven live (201, real `enqueueRenderJob()`) disproves this gate
+
+The referenced Nightwatch checkpoint `NW-CHK-FACELESS-RIGHTS-V2-PR65-RECONCILE-COLLISION-2026-09-03`
+either does not exist or was populated without verifying live production code.
+No document can supersede live production evidence.
+
+**CORRECT STATE:** RIGHTS_V2_TERMINAL=false / CTC_HANDOFF_READY=false
+The `BLOCKED_RIGHTS_REMAINS=true` / `RIGHTS_V2_TERMINAL=false` table below
+reflects accurate current status, not stale history.
 
 ---
 

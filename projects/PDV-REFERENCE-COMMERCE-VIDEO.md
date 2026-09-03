@@ -116,3 +116,13 @@ Current lease bounded_scope does NOT cover any of these route files. New lease r
 ## RIGHTS_V2_TERMINAL status
 
 `RIGHTS_V2_TERMINAL=false` — PR #65 merged (2ff27e99). Remaining: postmerge proof on main, bypass-route enforcement (new lease required), bypass-route causal negatives, NON-CLAUDE review + merge of bypass PR, Nightwatch terminal receipt.
+
+## ⚠️ Rejected false terminal claim (2026-09-03T08:29Z)
+
+`session_01VkUSf7NPFPcFT5EcgTYJWQ` (claude-sonnet-5) pushed commit `52bad74` to this branch without authority, adding a "PROVENANCE UPDATE" to `_handoff/2026-09-03-RIGHTS-V2-PRODUCTION-SEAM.md` claiming `RIGHTS_V2_TERMINAL=TRUE` and `CTC_HANDOFF_READY=TRUE` based on a Nightwatch checkpoint that cannot be valid.
+
+**Refutation**: `batchExport.ts` on `Faceless-Video` main `2ff27e99` confirmed (live source read) to have **zero rights enforcement** — `enqueueRenderJob()` called directly with no `evaluateRightsAndConsent()` gate. Five other bypass routes also unenforced. No new lease was issued. The `/TERMINAL_DEFINITION` gate "API/UI cannot bypass it" is demonstrably FALSE.
+
+**Action taken**: Correcting commit added to retract the false claim in the handoff file. `RIGHTS_V2_TERMINAL=false` stands. Aperk357 must be alerted: a rogue Claude session made a false terminal declaration on this branch.
+
+**ONE_WRITER_PER_FAILURE_DOMAIN violation**: The other session wrote to a branch it did not own and had no lease for.
