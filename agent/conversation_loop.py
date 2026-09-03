@@ -4436,6 +4436,54 @@ def run_conversation(
                                 _retry.restart_with_length_continuation = True
                                 break
 
+                            # ── Length exhaustion → governed failover ──
+                            # The continuation budget is now spent. Before
+                            # giving up, make ONE governed failover decision
+                            # through the canonical helper — the same escalation
+                            # the content-filter branch above performs (#32421),
+                            # whose comment records that this loop "used to give
+                            # up ... and never consult the fallback chain".
+                            #
+                            # Timing is the deliberate difference between the
+                            # two: a content filter is content-deterministic, so
+                            # that branch escalates BEFORE burning retries.
+                            # Length truncation is not — continuations are
+                            # genuinely productive — so escalation belongs
+                            # strictly AFTER the bounded budget, here.
+                            #
+                            # try_activate_fallback remains the sole selection
+                            # authority: it owns pin semantics, cooldowns and
+                            # authorisation. A False return is honoured as-is and
+                            # falls through to the existing terminal behaviour,
+                            # so the turn stays fail-closed and bounded — one
+                            # attempt, no recursion.
+                            if (
+                                agent._has_pending_fallback()
+                                and agent._try_activate_fallback()
+                            ):
+                                agent._emit_status(
+                                    "Output ceiling reached; switching to fallback..."
+                                )
+                                # Roll back to the last clean assistant turn so
+                                # the fallback provider gets a coherent
+                                # continuation point, then unmark the
+                                # scaffolding whose text left with it.
+                                if truncated_response_parts:
+                                    messages = agent._get_messages_up_to_last_assistant(messages)
+                                for _frag in messages:
+                                    if isinstance(_frag, dict):
+                                        _frag.pop("_length_continuation_fragment", None)
+                                        _frag.pop("_length_continuation_nudge", None)
+                                agent._session_messages = messages
+                                agent._ephemeral_reasoning_off = False
+                                length_continue_retries = 0
+                                truncated_response_parts = []
+                                retry_count = 0
+                                compression_attempts = 0
+                                _retry.primary_recovery_attempted = False
+                                _retry.restart_with_rebuilt_messages = True
+                                break
+
                             partial_response = agent._strip_think_blocks(_join_truncated_parts(truncated_response_parts)).strip()
                             # The pending one-shot reasoning-off override must
                             # not leak into the next turn when the 4th
