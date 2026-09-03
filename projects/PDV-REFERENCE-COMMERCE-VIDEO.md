@@ -3,7 +3,7 @@
 **Project:** Faceless Video (PDV) RightsAndConsent V2 production enforcement
 **Repo:** Aperk357/Faceless-Video, branch: claude/rights-and-consent-v2-complete-v1
 
-## Commit chain (current head: 72201dc)
+## Commit chain (current head: f2dadea)
 
 | SHA | Description | Author |
 |---|---|---|
@@ -22,14 +22,16 @@
 | Merge | Merge remote 40f5dd7 into local (resolved duplicate AuditAction + fixture shape) | Claude |
 | 42d07fb | fix(tests): update P1 fixtures to match discriminated-union consent schema | Claude |
 | 72201dc | chore: remove duplicate AuditAction literals from merge | Claude |
+| f2dadea | fix(rights): re-evaluate publication eligibility at request time in POST /render-jobs | Claude |
 
 ## PR #65 state
 
 - PR URL: Aperk357/Faceless-Video#65
-- Head: 72201dc
-- CI: GREEN (check_suite.completed, no failures)
-- Vercel: DEPLOYED
-- Status: open, awaiting NON-CLAUDE exact-head review at 72201dc + merge
+- Head: f2dadea
+- CI: pending (pushed 2026-09-03T07:02 UTC)
+- Status: open, BLOCKER addressed — awaiting NON-CLAUDE exact-head review at f2dadea + merge
+- Prior review (Aperk357, 72201dc): BLOCKER_COMMENT — stale-snapshot eligibility at POST /render-jobs gate
+- Fix (f2dadea): evaluateRightsAndConsent(rightsInput, new Date()) replaces snapshot trust; N10 causal negative added
 
 ## Lane collision record
 
@@ -37,10 +39,12 @@
 - collision_event_2: 22da7cf/cf23010/9a9201c/40f5dd7 (Aperk357) + 5e329cc (Claude) both fixed same CI failures
 - Resolution: Claude lane standing down; Aperk357 has declared branch ready for review
 
-## Net change from review-requested head (40f5dd7) to current head (72201dc)
+## Net change from review-requested head (40f5dd7) to current head (f2dadea)
 
 - `tests/contracts/referenceCommerceRightsV2.test.ts`: +25 lines — two P1 fixtures (P1-VOICE, P1-TRADEMARK) using evidence-bearing object shape. Redundant with Aperk357's P2 fixtures in second describe block; CI confirms no conflict.
 - `server/services/auditService.ts`: net zero change (duplicate entries removed)
+- `server/routes/renderJobs.ts`: import `evaluateRightsAndConsent`; replace snapshot eligibility trust with `evaluateRightsAndConsent(rightsInput, new Date())` re-derivation at request time
+- `tests/integration/renderJobsRightsEnforcement.test.ts`: N10 causal negative — stale snapshot (eligible at evaluated_at, expired by request time) → 403 CONSENT_EXPIRED
 
 ## Contract completeness
 
@@ -59,8 +63,8 @@
 
 ## Terminal gates remaining
 
-- [x] CI green on PR #65 head — CONFIRMED (72201dc, check_suite.completed)
-- [ ] NON-CLAUDE exact-head review at 72201dc — PENDING (requested by Aperk357)
+- [ ] CI green on PR #65 head — PENDING (f2dadea, pushed 2026-09-03T07:02 UTC)
+- [ ] NON-CLAUDE exact-head review at f2dadea — PENDING (blocker addressed; new review required per any-byte-change rule)
 - [ ] NON-CLAUDE distinct integration (merge) — PENDING
 - [ ] Postmerge production-path proof — PENDING (after merge)
 - [ ] RIGHTS_V2_TERMINAL=true receipt — PENDING
