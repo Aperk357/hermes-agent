@@ -27,19 +27,29 @@
 | f2dadea | fix(rights): re-evaluate publication eligibility at request time in POST /render-jobs | Claude |
 | 6d342e8 | style: format renderJobs.ts (Prettier) | Claude |
 
-## PR #65 state
+## PR #65 state (MERGED)
 
 - PR URL: Aperk357/Faceless-Video#65
-- Head: 6d342e8
+- Head at merge: 6d342e8 → squash commit 2ff27e99 on main
 - CI: GREEN (confirmed 2026-09-03T07:07 UTC — both gate jobs completed/success)
-- Status: open (draft), AWAITING NON-CLAUDE MERGE
+- Status: **MERGED** — 2026-09-03T07:34:39Z, merge SHA `2ff27e99b933a29025b958e5dfa02900b1a8691c`, Aperk357
 - Round-2 review (Aperk357, 72201dc): BLOCKER_COMMENT — stale-snapshot (addressed in f2dadea+6d342e8)
 - **GATE (5) SATISFIED** (2026-09-03T07:23 UTC): Aperk357 posted independent exact-head review at `6d342e8`:
   - Verdict: PASS_EXACT_HEAD / P0-P3=0 WITHIN PR #65 BOUNDED SCOPE / NO_MERGE_AUTHORITY
   - Confirms: evidence-refs enforcement, N10 stale-snapshot causal negative, re-derive at server time — all verified
   - Notes: video-engine/generate gap remains separate failure domain (not promoted by this review)
   - Note: "does not authorize self-merge" — Claude must NOT merge; Aperk357 (owner) holds merge authority
+- **GATE (6) DONE** (2026-09-03T07:34:39Z): Aperk357 merged PR #65 → main=2ff27e99
 - **P0-A RE-CONFIRMED at live head** (2026-09-03T07:21, Aperk357 COMMENT): publish.ts=0 rights refs, batchExport.ts=0 rights refs at 6d342e8; re-stated as entrypoint gap not covered by PR #65 bounded scope
+
+### Postmerge AAR (2026-09-03)
+
+- Merge commit: `2ff27e99b933a29025b958e5dfa02900b1a8691c` on main
+- Pre-merge CI: GREEN 9/9 at head `6d342e8` (identical content to merge commit)
+- Postmerge CI on main `2ff27e99`: UNCONFIRMED (check_runs API returns pre-merge head only; no postmerge run evidence yet)
+- Rights enforcement at POST /render-jobs: LIVE on main — `evaluateRightsAndConsent(rightsInput, new Date())` re-derivation enforced
+- video-engine/generate gap: SEPARATE FAILURE DOMAIN — not covered by PR #65 scope, not promoted by gate (5) review
+- Bypass-route P0-A OPEN: batchExport.ts, publish.ts, video_flow.ts, videoEngine.ts, renderJobs.ts dead-letter — zero enforcement on main; new lease required
 
 ## Lane collision record
 
