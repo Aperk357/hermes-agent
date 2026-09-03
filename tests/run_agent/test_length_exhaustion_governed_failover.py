@@ -243,6 +243,71 @@ class TestLengthExhaustionGovernedFailover:
             "Governed failover must preserve session/correlation identity."
         )
 
+    def test_rollback_unmarks_scaffolding_when_no_partial_text_exists(self, loop_agent):
+        """NEGATIVE CONTROL F2 — kills the 'skip the unmark' mutant.
+
+        F alone did not: when partial text exists, the rollback to the last
+        clean assistant turn already discards the marked messages, so dropping
+        the explicit unmark loop changed nothing observable. Here every
+        truncated fragment is EMPTY, so no rollback happens and the continuation
+        nudges are the only marked messages left. If the unmark is skipped they
+        survive into the fallback request and re-truncate every later turn.
+        """
+        from tests.run_agent.test_run_agent import _mock_response
+
+        recovery = _mock_response(
+            content="Completed on the fallback provider.", finish_reason="stop",
+        )
+        loop_agent.client.chat.completions.create.side_effect = [
+            *[_length_stub("") for _ in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)],
+            recovery,
+        ]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            result = _run(loop_agent, "write me a very long document")
+
+        assert calls["n"] == 1
+        leftovers = [
+            m for m in result["messages"]
+            if isinstance(m, dict)
+            and (m.get("_length_continuation_fragment")
+                 or m.get("_length_continuation_nudge"))
+        ]
+        assert not leftovers, (
+            "Continuation scaffolding must be unmarked explicitly, not merely as "
+            f"a side effect of the rollback. Survivors: {leftovers}"
+        )
+
+    def test_fallback_provider_gets_a_fresh_continuation_budget(self, loop_agent):
+        """NEGATIVE CONTROL H — kills the 'leave the counter dirty' mutant.
+
+        After failover the new provider must start with a full continuation
+        budget. If the counter carries over at 4, the very first truncation on
+        the fallback route hits the ceiling immediately, with no alternate left
+        — so the failover buys nothing and the turn still dies partial.
+        """
+        from tests.run_agent.test_run_agent import _mock_response
+
+        recovery = _mock_response(
+            content="Finished after one continuation on the fallback.",
+            finish_reason="stop",
+        )
+        loop_agent.client.chat.completions.create.side_effect = [
+            *[_length_stub(f"part {i} ") for i in range(LENGTH_RESPONSES_TO_EXHAUST_BUDGET)],
+            _length_stub("fallback part 1 "),   # needs a fresh budget to survive
+            recovery,
+        ]
+        calls = {"n": 0}
+        with _arm_fallback(loop_agent, calls):
+            result = _run(loop_agent, "write me a very long document")
+
+        assert calls["n"] == 1
+        assert result["completed"] is True, (
+            "The fallback provider must receive a fresh continuation budget; a "
+            "carried-over counter re-hits the ceiling on its first truncation."
+        )
+        assert result.get("partial") is not True
+
     def test_content_filter_path_still_escalates_first_pass(self, loop_agent):
         """Guards the adjacent precedent against regression: a content-filtered
         stub must STILL escalate on the first pass with zero retries burned.
