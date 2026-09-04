@@ -36,8 +36,13 @@ import pytest
 from hermes_constants import PARTIAL_STREAM_STUB_ID, FINISH_REASON_LENGTH
 
 
-# Budget is 4 continuation attempts; a 5th length response hits the ceiling.
-LENGTH_RESPONSES_TO_EXHAUST_BUDGET = 5
+# Budget is 4 continuation attempts: length_continue_retries is incremented
+# BEFORE the `< 4` schedule-check on each interim response, so the 4th
+# truncated response itself is the one that fails the check and falls
+# through to the ceiling/failover path -- a 5th length-stub call is never
+# made. Confirmed by direct trace: appends land at retries 1/2/3/4, and
+# the ceiling triggers immediately after the 4th, with no 5th API call.
+LENGTH_RESPONSES_TO_EXHAUST_BUDGET = 4
 
 
 @pytest.fixture()
