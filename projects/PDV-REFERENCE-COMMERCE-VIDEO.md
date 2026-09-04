@@ -142,13 +142,26 @@ on failure domain `faceless-video-server-routes-rights-v2-enforcement`.
 - `_patches/bypass-route-enforcement-001/tests-integration-rights-enforcement-bypass-routes.ts` — 25 causal negatives (5 routes × 5 tests)
 - `_patches/bypass-route-enforcement-001/APPLY-INSTRUCTIONS.md` — step-by-step apply guide
 
+### /PHASE0 cold-read COMPLETE (2026-09-04, session_01VPh5iq3fdMfKrFjiAjFYKK)
+
+| Item | Finding |
+|---|---|
+| Faceless main/head | `e5d2c1a39ab9f01dc46b56484a54edb39f354f46` |
+| PR #65 | MERGED (2ff27e99) |
+| Nightwatch leases | -002 RELEASED; new lease ready to grant |
+| Production reference_commerce call sites | renderJobs.ts ONLY — 0 other production routes |
+| contentRights middleware mounting | DEAD CODE — `enforceCommercialSafe` not imported/mounted anywhere |
+| RightsRequestManager | UGC workflow tool (third-party creator permissions) — separate concern, NOT V2 enforcement chain |
+| Provenance receipt call sites | renderJobs.ts ONLY |
+| Bypass matrix | FINAL — 5 publication routes + dead-letter retry; localRender.ts excluded (confirmed) |
+
 ### OWNER_ACTION_REQUIRED
 Session cannot push to Faceless-Video or Nightwatch (scoped to hermes-agent write only).
 Aperk357 must choose:
   (A) Grant this session push access to Faceless-Video AND Nightwatch explicitly, OR
   (B) Pick up implementation via host lane using artifacts committed here
 
-Both paths have complete specs. No further research is needed before implementation begins.
+Both paths have complete specs. /PHASE0 is DONE. No further research needed before implementation begins.
 
 ## ⚠️ Rejected false terminal claim (2026-09-03T08:29Z)
 
