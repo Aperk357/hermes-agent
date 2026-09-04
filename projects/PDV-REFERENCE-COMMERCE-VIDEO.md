@@ -117,6 +117,35 @@ Current lease bounded_scope does NOT cover any of these route files. New lease r
 
 `RIGHTS_V2_TERMINAL=false` — PR #65 merged (2ff27e99). Remaining: postmerge proof on main, bypass-route enforcement (new lease required), bypass-route causal negatives, NON-CLAUDE review + merge of bypass PR, Nightwatch terminal receipt.
 
+## Bypass route enforcement — session 01VPh5iq3fdMfKrFjiAjFYKK research packet (2026-09-04)
+
+**Faceless-Video head at research:** `e5d2c1a39ab9f01dc46b56484a54edb39f354f46`
+**Nightwatch head at research:** `949ae4c484946317fb4c27d04e13d516c00d3279`
+**Gate 5 (hermes-agent PR #7):** GPT-5.6 Sol PASS_WITH_NOTES at `3b10bb66` (2026-09-04T03:49:56Z)
+
+### Collision check result: CLEAR
+Prior lease `COS-LEASE-FACELESS-RIGHTS-CONSENT-V2-002-20260903` confirmed RELEASED
+per NW-CHK-0212 (SHA `c4d6d4d5db07ad1612ad52040b91a70323aef6db`). No active writers
+on failure domain `faceless-video-server-routes-rights-v2-enforcement`.
+
+### New lease (ready for grant)
+- Lease ID: `COS-LEASE-FACELESS-VIDEO-BYPASS-ROUTE-ENFORCEMENT-001-20260904`
+- Scope: `shared/validation/schemas.ts`, `server/routes/batchExport.ts`, `server/routes/publish.ts`, `server/routes/video_flow.ts`, `server/routes/videoEngine.ts`, `tests/integration/rights-enforcement-bypass-routes.test.ts`
+- Grant command in: `_handoff/2026-09-04-BYPASS-ROUTE-ENFORCEMENT-LEASE-AND-IMPLEMENTATION.md`
+
+### Implementation artifacts committed
+- `_handoff/2026-09-04-BYPASS-ROUTE-ENFORCEMENT-LEASE-AND-IMPLEMENTATION.md` — full lease research packet + implementation spec + 7-gate status
+- `_patches/bypass-route-enforcement-001/tests-integration-rights-enforcement-bypass-routes.ts` — 25 causal negatives (5 routes × 5 tests)
+- `_patches/bypass-route-enforcement-001/APPLY-INSTRUCTIONS.md` — step-by-step apply guide
+
+### OWNER_ACTION_REQUIRED
+Session cannot push to Faceless-Video or Nightwatch (scoped to hermes-agent write only).
+Aperk357 must choose:
+  (A) Grant this session push access to Faceless-Video AND Nightwatch explicitly, OR
+  (B) Pick up implementation via host lane using artifacts committed here
+
+Both paths have complete specs. No further research is needed before implementation begins.
+
 ## ⚠️ Rejected false terminal claim (2026-09-03T08:29Z)
 
 `session_01VkUSf7NPFPcFT5EcgTYJWQ` (claude-sonnet-5) pushed commit `52bad74` to this branch without authority, adding a "PROVENANCE UPDATE" to `_handoff/2026-09-03-RIGHTS-V2-PRODUCTION-SEAM.md` claiming `RIGHTS_V2_TERMINAL=TRUE` and `CTC_HANDOFF_READY=TRUE` based on a Nightwatch checkpoint that cannot be valid.
