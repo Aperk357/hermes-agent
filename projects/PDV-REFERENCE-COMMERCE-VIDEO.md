@@ -98,10 +98,13 @@
 |---|---|---|
 | POST /api/batch-export | server/routes/batchExport.ts | PROVEN LIVE — 201, real enqueueRenderJob, zero rights enforcement possible |
 | POST /api/v1/publish | server/routes/publish.ts | Static analysis — .strict() schema, zero rights refs, actual platform-publish action |
-| POST /api/v1/video/generate | server/routes/video_flow.ts | Static analysis |
-| POST /api/v1/video/generate_and_publish | server/routes/video_flow.ts | Static analysis |
+| POST /api/v1/video/generate_and_publish | server/routes/video_flow.ts | Static analysis — generate_and_publish only; generate (no publish) excluded |
+| POST /api/video-engine/generate | server/routes/videoEngine.ts | Static analysis |
 | POST /api/video-engine/batch | server/routes/videoEngine.ts | Static analysis — undisclosed sibling of disclosed /generate gap |
-| POST /render-jobs dead-letter retry | server/routes/renderJobs.ts | Static P1 — re-enqueues without rights re-eval |
+| POST /render-jobs/:jobId/dead-letter/retry | server/routes/renderJobs.ts line 481 | Admin-gated; re-queues job without re-evaluating stored rights at retry time |
+
+Note: `server/routes/localRender.ts` confirmed NOT a bypass route (2026-09-04 source read) —
+local preview/download only via `startLocalRender()`, no publication action.
 
 Current lease bounded_scope does NOT cover any of these route files. New lease required before code changes.
 
@@ -130,8 +133,9 @@ on failure domain `faceless-video-server-routes-rights-v2-enforcement`.
 
 ### New lease (ready for grant)
 - Lease ID: `COS-LEASE-FACELESS-VIDEO-BYPASS-ROUTE-ENFORCEMENT-001-20260904`
-- Scope: `shared/validation/schemas.ts`, `server/routes/batchExport.ts`, `server/routes/publish.ts`, `server/routes/video_flow.ts`, `server/routes/videoEngine.ts`, `tests/integration/rights-enforcement-bypass-routes.test.ts`
+- Scope: `shared/validation/schemas.ts`, `server/routes/batchExport.ts`, `server/routes/publish.ts`, `server/routes/video_flow.ts`, `server/routes/videoEngine.ts`, `server/routes/renderJobs.ts`, `tests/integration/rights-enforcement-bypass-routes.test.ts`
 - Grant command in: `_handoff/2026-09-04-BYPASS-ROUTE-ENFORCEMENT-LEASE-AND-IMPLEMENTATION.md`
+- `localRender.ts`: EXCLUDED (local preview, no publication action — confirmed 2026-09-04)
 
 ### Implementation artifacts committed
 - `_handoff/2026-09-04-BYPASS-ROUTE-ENFORCEMENT-LEASE-AND-IMPLEMENTATION.md` — full lease research packet + implementation spec + 7-gate status

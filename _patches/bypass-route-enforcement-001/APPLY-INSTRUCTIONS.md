@@ -81,6 +81,22 @@ For /batch, check that `tenantId` and `userId` are accessible in that handler sc
 before adding audit logging. If not available, add a note in the PR that audit logging
 is omitted for /batch due to missing context (do NOT fabricate values).
 
+## Step 5b: server/routes/renderJobs.ts — dead-letter retry
+
+`renderJobs.ts` already imports `RightsAndConsentV2Schema` and `evaluateRightsAndConsent`
+(added by PR #65). NO new imports needed.
+
+### Injection point: POST /render-jobs/:jobId/dead-letter/retry (line ~481)
+
+After the `job.status !== "dead_letter"` guard and before `retryDeadLetterJob(jobId)`,
+insert the re-evaluation block from Part 3 of the lease research packet.
+
+This is a DIFFERENT pattern from the other 4 routes:
+- Does NOT read `rights_record` from request body (uses `emptyBodySchema`)
+- DOES re-read `job.rightsRecord` from the DB record already fetched
+- Fail-closed when `job.rightsRecord` is null (pre-enforcement job) — 403
+- Fail-closed when stored rights are now ineligible at server time — 403
+
 ## Step 6: Add integration test file
 
 Copy `tests-integration-rights-enforcement-bypass-routes.ts` from this patch directory
