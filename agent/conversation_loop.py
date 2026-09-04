@@ -4464,20 +4464,34 @@ def run_conversation(
                                 agent._emit_status(
                                     "Output ceiling reached; switching to fallback..."
                                 )
-                                # Roll back to the last clean assistant turn so
-                                # the fallback provider gets a coherent
-                                # continuation point, then unmark the
-                                # scaffolding whose text left with it.
-                                if truncated_response_parts:
-                                    messages = agent._get_messages_up_to_last_assistant(messages)
-                                for _frag in messages:
-                                    if isinstance(_frag, dict):
-                                        _frag.pop("_length_continuation_fragment", None)
-                                        _frag.pop("_length_continuation_nudge", None)
-                                agent._session_messages = messages
+                                # Deliberately NO history rollback and NO
+                                # discard of the partial text here.
+                                #
+                                # The content-filter branch above rolls back
+                                # because a filter POISONS its output — that
+                                # text must not survive. A length truncation is
+                                # the opposite: every fragment is good, already
+                                # paid-for output. The fallback provider
+                                # continues the turn from it, exactly as a
+                                # same-provider continuation would, so nothing
+                                # the user already paid for is thrown away.
+                                #
+                                # Rolling back here is actively harmful: the
+                                # fragment for THIS ceiling response is appended
+                                # above (before the budget check), so
+                                # "last assistant" IS that fragment — rolling
+                                # back to it silently drops an EARLIER fragment
+                                # while keeping this one, and the finalizer then
+                                # glues the survivor onto the fallback's answer.
+                                # Measured directly: history lost "part 3" and
+                                # the reply came back as
+                                # "part 4 Completed on the fallback provider."
+                                #
+                                # Resetting the continuation budget is what makes
+                                # the fallback's own first response able to use a
+                                # full set of attempts.
                                 agent._ephemeral_reasoning_off = False
                                 length_continue_retries = 0
-                                truncated_response_parts = []
                                 retry_count = 0
                                 compression_attempts = 0
                                 _retry.primary_recovery_attempted = False
