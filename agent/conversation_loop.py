@@ -4436,6 +4436,82 @@ def run_conversation(
                                 _retry.restart_with_length_continuation = True
                                 break
 
+                            # ── Length exhaustion → governed failover ──
+                            # The continuation budget is now spent. Before
+                            # giving up, make ONE governed failover decision
+                            # through the canonical helper — the same escalation
+                            # the content-filter branch above performs (#32421),
+                            # whose comment records that this loop "used to give
+                            # up ... and never consult the fallback chain".
+                            #
+                            # Timing is the deliberate difference between the
+                            # two: a content filter is content-deterministic, so
+                            # that branch escalates BEFORE burning retries.
+                            # Length truncation is not — continuations are
+                            # genuinely productive — so escalation belongs
+                            # strictly AFTER the bounded budget, here.
+                            #
+                            # try_activate_fallback remains the sole selection
+                            # authority: it owns pin semantics, cooldowns and
+                            # authorisation. A False return is honoured as-is and
+                            # falls through to the existing terminal behaviour,
+                            # so the turn stays fail-closed and bounded — one
+                            # attempt, no recursion.
+                            if (
+                                agent._has_pending_fallback()
+                                and agent._try_activate_fallback()
+                            ):
+                                agent._emit_status(
+                                    "Output ceiling reached; switching to fallback..."
+                                )
+                                # Deliberately NO history rollback and NO
+                                # discard of the partial text here.
+                                #
+                                # The content-filter branch above rolls back
+                                # because a filter POISONS its output — that
+                                # text must not survive. A length truncation is
+                                # the opposite: every fragment is good, already
+                                # paid-for output. The fallback provider
+                                # continues the turn from it, exactly as a
+                                # same-provider continuation would, so nothing
+                                # the user already paid for is thrown away.
+                                #
+                                # Rolling back here is actively harmful: the
+                                # fragment for THIS ceiling response is appended
+                                # above (before the budget check), so
+                                # "last assistant" IS that fragment — rolling
+                                # back to it silently drops an EARLIER fragment
+                                # while keeping this one, and the finalizer then
+                                # glues the survivor onto the fallback's answer.
+                                # Measured directly: history lost "part 3" and
+                                # the reply came back as
+                                # "part 4 Completed on the fallback provider."
+                                #
+                                # Resetting the continuation budget is what makes
+                                # the fallback's own first response able to use a
+                                # full set of attempts.
+                                agent._ephemeral_reasoning_off = False
+                                length_continue_retries = 0
+                                retry_count = 0
+                                compression_attempts = 0
+                                _retry.primary_recovery_attempted = False
+                                # A prior continuation attempt earlier in this same
+                                # turn may have set this flag; unlike its sibling
+                                # restart_with_* flags it is never cleared at its
+                                # own consumption site, so it stays stale for the
+                                # rest of the turn. restart_with_rebuilt_messages
+                                # is checked first and wins this iteration, but a
+                                # stale restart_with_length_continuation would
+                                # incorrectly intercept the very next iteration —
+                                # including a clean, immediate success from the
+                                # fallback provider — as if it still needed a
+                                # continuation retry. Clear it explicitly so the
+                                # fallback provider's first response is evaluated
+                                # on its own merits.
+                                _retry.restart_with_length_continuation = False
+                                _retry.restart_with_rebuilt_messages = True
+                                break
+
                             partial_response = agent._strip_think_blocks(_join_truncated_parts(truncated_response_parts)).strip()
                             # The pending one-shot reasoning-off override must
                             # not leak into the next turn when the 4th
