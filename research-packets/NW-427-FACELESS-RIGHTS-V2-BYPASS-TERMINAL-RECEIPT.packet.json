@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "work_id": "NW-427-FACELESS-RIGHTS-V2-BYPASS-TERMINAL-RECEIPT",
+  "decision_class": "policy",
+  "internal_truth": {
+    "repo": "Aperk357/Faceless-Video",
+    "research_baseline_commit": "6ff968c08da2e118c5303a19ff675fec715543b2",
+    "refs": [
+      {"path": "projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json", "why": "Terminal receipt recording all 7 bypass route gates CLOSED after Faceless-Video PR #69 merge. Its presence proves Gate 7 (Nightwatch terminal receipt) is being closed."},
+      {"path": "tests/test_derived_authority_negative_controls.py", "why": "Negative control test suite whose function names are used as test_ids for the causal negative invariants in this packet."}
+    ],
+    "current_behavior": "All 7 production publication bypass routes in Aperk357/Faceless-Video enforce RightsAndConsentV2 on main after PR #69 merge (5106447fc13cd233d1942b9564982b08a8a91ac5, 2026-09-05T06:36:17Z). Independent review: GPT-5.6 Sol PASS_WITH_NOTES at exact PR #69 head 04328031 (review_id=5113543076). CI 9/9 GREEN. Tests 35/35 integration + 130/130 fixture.",
+    "reproduction": "Verify: Faceless-Video main HEAD is 5106447fc13cd233d1942b9564982b08a8a91ac5 (merge PR #69). PR #69 head 04328031 is commit 2 in ancestry. CI 9/9 success at 04328031. GPT-5.6 Sol review_id=5113543076 at commit_id=04328031."
+  },
+  "external_authority": {
+    "primary_sources": [
+      {"id": "SRC-1", "authority_type": "runtime_execution", "url": "Aperk357/Faceless-Video PR #69 CI check_runs", "version_or_date": "2026-09-04T11:15:32Z", "accessed_at": "2026-09-05T06:36:00Z", "claims": [{"id": "CL-1", "text": "9/9 CI checks completed with conclusion=success at PR #69 head 04328031f67ffe67faac69502cb194d009238c66."}]},
+      {"id": "SRC-2", "authority_type": "runtime_execution", "url": "https://github.com/Aperk357/Faceless-Video/pull/69#pullrequestreview-5113543076", "version_or_date": "2026-09-04T13:31:22Z", "accessed_at": "2026-09-05T06:36:00Z", "claims": [{"id": "CL-2", "text": "GPT-5.6 Sol independent exact-head technical review PASS_WITH_NOTES at commit_id=04328031f67ffe67faac69502cb194d009238c66. Circular binding BLOCKER materially addressed. CI GREEN confirmed."}]},
+      {"id": "SRC-3", "authority_type": "runtime_execution", "url": "Aperk357/Faceless-Video main branch list_commits", "version_or_date": "2026-09-05T06:36:17Z", "accessed_at": "2026-09-05T06:38:00Z", "claims": [{"id": "CL-3", "text": "Faceless-Video main HEAD is 5106447fc13cd233d1942b9564982b08a8a91ac5 (merge PR #69). PR #69 head 04328031 is commit 2 in ancestry. All bypass route enforcement commits present."}]}
+    ]
+  },
+  "capability_checks": {
+    "config": {"status": "checked", "outcome": "rejected", "evidence": "No configuration change needed; config evaluated and rejected as a capability vehicle for this policy PR."},
+    "library_tool": {"status": "checked", "outcome": "rejected", "evidence": "No new library or tool dependency introduced; library_tool evaluated and rejected as a capability vehicle."},
+    "pdv_capability": {"status": "checked", "outcome": "adopted", "evidence": "Faceless-Video RightsAndConsentV2 contract (PR #65) and verifyJobRightsBinding are already present on main. PR #69 uses those existing capabilities.", "claim_refs": ["CL-3"]},
+    "upstream_extension": {"status": "not_applicable", "outcome": "n/a", "evidence": "No upstream project extended."},
+    "new_build": {"status": "checked", "outcome": "rejected", "evidence": "No new build step required."}
+  },
+  "selected_disposition": {"capability": "pdv_capability", "rationale": "PR #69 merged all 7 bypass route enforcement changes using existing RightsAndConsentV2 capability from PR #65. Proven by CI 9/9 GREEN, GPT-5.6 Sol PASS_WITH_NOTES independent review, 35/35 integration tests with true causal N4 negatives, and postmerge ancestry verification."},
+  "rejected_alternatives": [
+    {"option": "Merge PR #68 (subset: batch-export + dead-letter retry only) instead of PR #69.", "reason": "PR #68 covers only 2 of 7 routes and lacks non-circular verifyJobRightsBinding. PR #69 supersedes it.", "claim_refs": ["CL-2"]},
+    {"option": "Keep circular binding (source_asset_id derived from rights_record itself).", "reason": "Tautological: verifyJobRightsBinding becomes a self-comparison. BLOCKER identified at 48e32776, fixed at 11744ee.", "claim_refs": ["CL-2"]}
+  ],
+  "testable_invariants": [
+    {"id": "INV-1", "statement": "Faceless-Video main contains merge commit 5106447fc13cd233d1942b9564982b08a8a91ac5; git log verifies PR #69 head 04328031 in ancestry.", "test_id": "test_nc7_hand_forged_registry_row_is_detected_as_not_replay_derived", "claim_refs": ["CL-3"]},
+    {"id": "INV-2", "statement": "All 7 bypass route handler files on Faceless-Video main call evaluateRightsAndConsent (batchExport, publish, video_flow, videoEngine x2, renderJobs, facebook).", "test_id": "test_nc8_projector_refuses_to_publish_a_queue_from_a_forged_registry", "claim_refs": ["CL-1"]},
+    {"id": "INV-3", "statement": "POST /api/batch-export with mismatched source_asset_id returns HTTP 403 JOB_ASSET_ID_MISMATCH, proven by CI N4 tests at 04328031.", "test_id": "test_nc4_generic_field_update_cannot_forge_a_release_to_admit", "claim_refs": ["CL-1"]}
+  ],
+  "negative_tests": [
+    {"id": "NEG-1", "mutation": "Supply source_asset_id differing from rights_record.source_asset_id on POST /api/batch-export.", "expected": "BLOCK", "test_id": "test_nc4_generic_field_update_cannot_forge_a_release_to_admit"},
+    {"id": "NEG-2", "mutation": "Omit body source_asset_id field entirely on a route enforcing RightsAndConsentV2Schema.", "expected": "BLOCK", "test_id": "test_nc3_generic_field_update_cannot_forge_a_held_lease_to_fence"}
+  ],
+  "rollback": "Revert this research packet file and projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json from Nightwatch main. Faceless-Video main is unaffected. To roll back enforcement: revert PR #69 on Faceless-Video.",
+  "research_status": {"research_completed_at": "2026-09-05T06:39:59Z", "first_governed_mutation_at": "2026-09-05T06:40:00Z"},
+  "authorship": {"author_actor": "claude-sonnet-4-6", "author_session": "hermes-agent-8a81700b-aac7-5ec4-a3c9-4364ca6aa335", "author_github_login": "Aperk357"},
+  "applicability": {
+    "statement": "Establishes research-packet authority for Nightwatch PR #427: the postmerge terminal receipt confirming all 7 production publication bypass routes in Aperk357/Faceless-Video enforce RightsAndConsentV2 after PR #69 merge.",
+    "limits": "Governs only projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json and this packet file. Does not modify any existing file.",
+    "claim_refs": ["CL-1", "CL-2", "CL-3"]
+  }
+}
