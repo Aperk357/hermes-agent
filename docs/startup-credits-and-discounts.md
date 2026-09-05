@@ -14,8 +14,9 @@ ceiling to reconcile against your own facts, not a forecast.
 
 | Path | Cloud + AI credits (nominal) | SaaS credits / discounts (nominal) | Notes |
 |---|---|---|---|
-| Bootstrapped, no investor, no accelerator | ~$50K–$55K | ~$160K | Azure $5K, GCP Start $2K, AWS Founders $1K (up to $5K over time), Cloudflare $10K, Daytona $10K, OpenRouter $5K, Novita $10K, Sentry $5K, Stripe Atlas $2.5K (requires the $500 Atlas fee); plus PostHog $50K, Segment $50K, Retool up to $60K of discount. Excludes unverified figures such as the Anthropic direct tier |
-| One accelerator or institutional pre-seed check | up to ~$1.4M–$1.5M | $250K+ | Google AI tier $350K, AWS Portfolio $200K, Azure $150K, Cloudflare $350K, Datadog $100K, DigitalOcean up to $100K, Neon $100K, Together $15K–$50K, Vercel $30K, Modal $25K, GitHub $10K; Anthropic up to $100K is unverified and excluded from the range |
+| Bootstrapped, no investor, no accelerator | ~$40K | ~$135K | Azure $5K, GCP Start $2K, AWS Founders $1K (up to $5K over time), Cloudflare $10K, Daytona $10K, OpenRouter $5K, Sentry $5K, Stripe Atlas $2.5K (requires the $500 Atlas fee); plus PostHog $50K, Segment $25K/yr (up to $50K over 2 yrs), Retool up to $60K of discount. Excludes unverified figures such as the Anthropic direct tier, and excludes Novita, whose award is reviewed on backing and mostly earned through matched spend |
+| Funded or partner-backed, pre-seed to Series A, stage-coherent | up to ~$1.2M | $250K+ | Google AI tier $350K, AWS Portfolio $200K, Azure up to $150K (usage milestones), Cloudflare Tier 2 $100K, Datadog $100K, DigitalOcean up to $100K (varies by partner), Neon $100K, Together $15K (under $5M raised), Vercel $30K, Modal $25K, GitHub $10K. Anthropic up to $100K is unverified and excluded. Each program has its own partner list and funding test, so no single check unlocks all of these |
+| Catalog ceiling across all stages, not one scenario | ~$1.47M | | Same list with the maxima that require later stages: Cloudflare Tier 1 $350K and Together $50K (over $10M raised). Listed only to show the published ceiling; a single company cannot be pre-seed and over $10M raised at once |
 | Payroll tax (once you run W-2 payroll) | Up to $500K per tax year, elective for at most 5 tax years | | Federal R&D credit payroll offset, IRC 41(h). Actual amount is the credit you compute on Form 6765, which is usually far below the cap |
 
 ### Confirmed directly eligible subtotal (no referral, official amount verified 2026-09-05)
@@ -28,18 +29,17 @@ no institutional funding. Confirm each row against your own facts before countin
 
 | Program | Amount | Official condition that must hold |
 |---|---|---|
-| Microsoft for Startups, open offer | $5,000 | New Azure customer; $1K instant, $4K after business verification |
+| Microsoft for Startups, open offer | $5,000 | New Azure customer; $200 starter credit, then up to $5K after business verification (milestones 1 and 2) |
 | Google for Startups Cloud Program, Start tier | $2,000 | Pre-funded, under 5 yrs old, MVP; counts against the under-$5K prior-credit limit for Scale |
 | AWS Activate Founders | $1,000 | Self-serve; selected startups may receive up to $5K over time |
 | Cloudflare for Startups, Tier 3 | $10,000 | No minimum funding required |
 | Daytona Startup Grid | $10,000 | AI or agent product; pitch deck and 100-word story |
 | OpenRouter for Startups | $5,000 | Pre-Series B, under ~$500 lifetime spend |
-| Novita Startup Program | $10,000 | $1K upfront, remainder matched against spend |
 | Sentry for Startups | $5,000 | Pre-seed to Series A |
-| **Cloud + AI credits, confirmed** | **$48,000** | |
+| **Cloud + AI credits, confirmed** | **$38,000** | Novita excluded: only up to $1K is upfront, the rest is earned via matched spend, and Novita reviews backing and stage |
 | PostHog for Startups | $50,000 | Under 2 yrs old, under $5M raised |
-| Segment Startup Program | $50,000 over 2 yrs | Incorporated under 24 months, under $5M raised |
-| **SaaS credits, confirmed** | **$100,000** | Retool's up-to-$60K is a discount on list price and is excluded |
+| Segment Startup Program | $25,000 (year 1) | $25K annual credit toward the Team plan for as long as eligibility holds, up to 2 years ($50K max). Incorporated under 24 months, under $5M raised. Source: https://segment.com/docs/guides/usage-and-billing/do-you-offer-any-plan-discounts-for-startups-or-non-profits/ |
+| **SaaS credits, confirmed** | **$75,000** | Up to $100,000 if Segment renews for year 2. Retool's up-to-$60K is a discount on list price and is excluded |
 
 Non-cash confirmed benefits not in the totals: ElevenLabs Startup Grant (33M characters for 12
 months), NVIDIA Inception and Intel Liftoff membership, Microsoft 365 via Microsoft for Startups,
@@ -62,7 +62,7 @@ match your compute ramp instead of claiming everything on day one.
 | Gemini API free tier (AI Studio) | Free Flash models, ~10–15 RPM, 250–1,500 RPD. Disappears once billing is enabled on the project | Anyone | No | https://aistudio.google.com | Official |
 | Together AI Startup Accelerator | $15K (< $5M raised) / $30K ($5–10M) / $50K (> $10M) + eng hours | Seed to Series B, AI-native, no equity | No | https://www.together.ai/startup-accelerator | Official |
 | Fireworks for Startups | Credits (1-yr expiry; aggregators say up to $10K), higher rate limits | Pre-seed to Series B | No | https://fireworks.ai/startups | Official page, amount unverified |
-| Novita Startup Program | Up to $10K: $1K upfront, rest matched against spend; 1 yr | Early-stage AI startups | No | https://startups.novita.ai | Official |
+| Novita Startup Program | Up to $10K over 1 yr, but only up to $1K is granted upfront. The next $5K is matched 1:1 against spend and the final $4K at 2:1, split up to $5K Model API and $5K Agent Sandbox. Treat it as a spend rebate, not a grant | Reviewed on stage, team, backing, traction, current spend, and expected usage; new Novita users. Reviewer inspection of the current page reports venture-backed, Series B or earlier, AI-native | No partner ID, but backing is reviewed | https://startups.novita.ai | Official mechanics; eligibility wording partly from review |
 | Groq | Free tier: all models, ~30 RPM / 14.4K RPD, no card. No startup program | Anyone | No | https://console.groq.com | Official |
 | Mistral | Startup page currently dormant (404). Free plan: $10/mo API credits | Contact sales | n/a | https://mistral.ai/pricing | Unverified/inactive |
 | Cohere Startup Program | ~25% discount for 12 mo (discount, not credits) | Series B or earlier | No | https://cohere.com/startup-program-application | Official |
@@ -79,9 +79,9 @@ match your compute ramp instead of claiming everything on day one.
 
 | Program | Worth | Eligibility | Referral needed? | Link | Confidence |
 |---|---|---|---|---|---|
-| Microsoft for Startups (Azure) | $1K instant → $5K after verification. Investor Offer: $100K start, up to $150K–$200K over time. Includes Azure OpenAI, GitHub Enterprise, Microsoft 365 (Teams) | New Azure customer, registered entity. Investor Offer needs Investor Network referral code | No for $5K; yes above | https://www.microsoft.com/en-us/startups | Official |
+| Microsoft for Startups (Azure) | Milestone model: $200 starter credit at Azure sign-up, then up to $5K (milestones 1 and 2) after business verification. Later milestones up to $150K are unlocked automatically by active Azure workloads and sustained usage, not by application. Investor Network-backed startups can reach up to $200K plus Azure support, GPU access, GitHub Enterprise, and Microsoft 365 Business Premium | New Azure customer, registered entity. Higher tiers need verified progress and usage; the $200K path needs an Investor Network partner | No for $5K; usage-gated above; partner for $200K | https://www.microsoft.com/en-us/startups and https://learn.microsoft.com/en-us/microsoft-for-startups/benefits/get-more-benefits | Official (2026-09-05) |
 | AWS Activate (Bedrock-eligible) | Two direct packages. **Founders**: $1K on approval; selected startups can receive up to $5K over time. **Portfolio**: up to $200K, requires an Activate Provider Organization ID from an accelerator, angel group, or VC. Separately, Stripe Atlas, Mercury, Brex, and YC Startup School each advertise a $5K AWS package for their members; those run through the Provider channel, and AWS does not publish how they interact with each other or with Founders | < 10 yrs, pre-Series B (last round within 12 months), working website, no prior Activate credits of equal or greater value | No for Founders; yes (Org ID) for Portfolio | https://aws.amazon.com/startups/credits/ | Official (2026-09-05); $300K gen-AI tier unverified |
-| Cloudflare for Startups | Three tiers, credits valid 1 yr: Tier 3 $10K (no minimum funding), Tier 2 $100K (adds account manager and technical sessions), Tier 1 $350K (adds office hours and priority support). Credits cover usage-based services; core security and networking are free at every tier | Software startup, real domain and company email | No for Tier 3; higher tiers scale with funding stage | https://www.cloudflare.com/startups/ | Official (2026-09-05) |
+| Cloudflare for Startups | Three tiers, credits valid 1 yr: Tier 3 $10K (no minimum funding), Tier 2 $100K (adds account manager and technical sessions), Tier 1 $350K (adds office hours and priority support). Credits cover usage-based services; core security and networking are free at every tier | Software startup, real domain and company email. Tier 2 and Tier 1 are gated on funding stage; Cloudflare does not publish the exact raise thresholds on the pages reachable here | No for Tier 3; higher tiers require later funding stages | https://www.cloudflare.com/startups/ | Official tiers (2026-09-05); stage thresholds unpublished |
 | Daytona Startup Grid | $10K on approval, up to $50K; $25K immediate with partner VC referral | AI/agent startups; pitch deck + 100-word story | No | https://www.daytona.io/startups | Official |
 | Modal Startup Program | Up to $25K credits, 12 mo. Starter plan: $30/mo free compute | New to Modal; Seed–Series A via Modal VC partner or > $1M raised | Effectively yes | https://modal.com/startups | Official |
 | Lambda GPU cloud | $7,500 credits for NVIDIA Inception members; research grant up to $5K | NVIDIA Inception membership | Via Inception | https://lambda.ai | Official snippet, URL unverified |
@@ -150,7 +150,7 @@ match your compute ramp instead of claiming everything on day one.
 | PostHog for Startups | $50K credits, valid 12 months from application. Credits cannot be used for PostHog AI tools (PostHog Desktop, Slack app, Replay Vision, PostHog AI, Inbox); PostHog's handbook dates that exclusion from Sept 14, 2026 | < 2 yrs old, < $5M raised, company-domain account | No | https://posthog.com/startups and https://posthog.com/handbook/marketing/startups | Official (2026-09-05) |
 | Sentry for Startups | Up to $5,000 credits + priority support, 1 yr | Pre-seed to Series A | No | https://sentry.io/for/startups/ | Official |
 | Datadog for Startups | Up to $100,000 credits, 1 yr | <= Series A, new to Datadog | Yes | https://www.datadoghq.com/partner/datadog-for-startups/ | Official |
-| Segment Startup Program | Up to $50K credits over 2 yrs | Incorporated < 24 mo, < $5M raised | No | https://segment.com/industry/startups | Official |
+| Segment Startup Program | $25K annual credit toward the monthly Team plan, renewable while eligible for up to 2 yrs ($50K max) | Incorporated < 24 mo, < $5M raised, no existing Segment contract | No | https://segment.com/startups/ and https://segment.com/docs/guides/usage-and-billing/do-you-offer-any-plan-discounts-for-startups-or-non-profits/ | Official (2026-09-05) |
 | Retool for Startups | 100% off Team/Business for 1 yr (up to $60K); yr 2: 25% off | < $10M raised, founded within 10 yrs | No | https://retool.com/startups | Official |
 | Linear for Startups | Up to 6 mo free Basic or Business | < 50 employees | Yes | https://linear.app/startups | Official |
 | Intercom Early Stage | 93% off yr 1 ($33/mo Advanced), 50% yr 2, 25% yr 3 | < 15 employees, <= $10M raised | No | https://www.intercom.com/early-stage | Official |
@@ -201,7 +201,7 @@ match your compute ramp instead of claiming everything on day one.
 ## 3. Stacking order
 
 1. **Identity first (week 1).** Incorporate (Stripe Atlas if you want $500 to turn into $7.5K+ of Stripe and AWS credits). Open Mercury or Brex for banking; each advertises a $5K AWS package, but AWS does not publish how partner packages combine, so expect to use one channel. Join Carta Launch and YC Startup School. Use a domain-matched email everywhere.
-2. **Claim the no-referral tiers (weeks 1–2).** Microsoft for Startups ($5K Azure + M365), Cloudflare $10K, Daytona $10K, OpenRouter $5K, Novita $10K, Anthropic direct tier, NVIDIA Inception (then Lambda $7.5K), Intel Liftoff, ElevenLabs grant, PostHog, Segment, Sentry, Retool, Intercom, Zendesk, Notion 3 mo, Miro $500, Vanta $1K. Vercel Open Source Program if you keep a genuinely maintained OSS repo. Twilio Searchlight before Sept 11.
+2. **Claim the no-referral tiers (weeks 1–2).** Microsoft for Startups ($5K Azure + M365), Cloudflare $10K, Daytona $10K, OpenRouter $5K, Anthropic direct tier, Novita (only $1K upfront, rest is spend-matched), NVIDIA Inception (then Lambda $7.5K), Intel Liftoff, ElevenLabs grant, PostHog, Segment, Sentry, Retool, Intercom, Zendesk, Notion 3 mo, Miro $500, Vanta $1K. Vercel Open Source Program if you keep a genuinely maintained OSS repo. Twilio Searchlight before Sept 11.
 3. **Hold Google Cloud Start if a check is coming.** The $2K Start tier counts against the under-$5K prior-credit limit for the $200K–$350K Scale/AI tier.
 4. **Understand the partner gates before applying for anything large.** Azure $150K, Google Scale/AI, AWS Portfolio, Anthropic $100K, Datadog $100K, Vercel $30K, GitHub $10K, Perplexity $5K, Linear, Atlassian, Zoom, and Figma each have their own partner or funding rules, and they differ. Google's Scale tier accepts equity investment (including SAFEs) only from institutional investors and VC firms; angel, friends-and-family, crowdfunding, grants, and prize money do not qualify. Vercel, GitHub, and Datadog require affiliation with their own approved partner lists regardless of how much you raised. Do not raise money, sign a SAFE, or take on equity or legal obligations in order to unlock credits; raise only when the business needs capital, then apply within 12 months of the round.
 5. **Stagger activations.** Most credits last 12 months. Activate Azure, then GCP, then AWS as your compute grows.
