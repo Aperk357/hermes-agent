@@ -6,8 +6,7 @@
     "repo": "Aperk357/Faceless-Video",
     "research_baseline_commit": "6ff968c08da2e118c5303a19ff675fec715543b2",
     "refs": [
-      {"path": "projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json", "why": "Terminal receipt recording all 7 bypass route gates CLOSED after Faceless-Video PR #69 merge. Its presence proves Gate 7 (Nightwatch terminal receipt) is being closed."},
-      {"path": "tests/test_derived_authority_negative_controls.py", "why": "Negative control test suite whose function names are used as test_ids for the causal negative invariants in this packet."}
+      {"path": "projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json", "why": "Carrier/handoff receipt recording all 7 Faceless-Video bypass routes enforcing RightsAndConsentV2 after PR #69 merge. Its presence on hermes-agent main is Gate 7's carrier document; Gate 7 closes only upon Nightwatch #427 completion as a separate governed action."}
     ],
     "current_behavior": "All 7 production publication bypass routes in Aperk357/Faceless-Video enforce RightsAndConsentV2 on main after PR #69 merge (5106447fc13cd233d1942b9564982b08a8a91ac5, 2026-09-05T06:36:17Z). Independent review: GPT-5.6 Sol PASS_WITH_NOTES at exact PR #69 head 04328031 (review_id=5113543076). CI 9/9 GREEN. Tests 35/35 integration + 130/130 fixture.",
     "reproduction": "Verify: Faceless-Video main HEAD is 5106447fc13cd233d1942b9564982b08a8a91ac5 (merge PR #69). PR #69 head 04328031 is commit 2 in ancestry. CI 9/9 success at 04328031. GPT-5.6 Sol review_id=5113543076 at commit_id=04328031."
@@ -47,11 +46,12 @@
     "reconciliation": "prospective_only",
     "note": "Faceless-Video PR #69 was merged from a branch in the -001 authority lineage, which the successor spec declares unauthorized/superseded requiring fresh -002 authority. The enforcement facts in this packet (CI, independent review, ancestry) are prospective and accurate as of the merge timestamp. No retroactive re-labeling of the -001 lineage is made. Fresh -002 authority is required before any subsequent governed mutations in this workstream may rely on this lineage."
   },
-  "rollback": "Revert this research packet file and projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json from Nightwatch main. Faceless-Video main is unaffected. To roll back enforcement: revert PR #69 on Faceless-Video.",
+  "rollback": "Revert this research packet file and projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json from hermes-agent main. Faceless-Video main is unaffected. To roll back enforcement: revert PR #69 on Faceless-Video.",
   "research_status": {"research_completed_at": "2026-09-05T06:39:59Z", "first_governed_mutation_at": "2026-09-05T06:40:00Z"},
   "authorship": {"author_actor": "claude-sonnet-4-6", "author_session": "hermes-agent-8a81700b-aac7-5ec4-a3c9-4364ca6aa335", "author_github_login": "Aperk357"},
   "applicability": {
-    "statement": "Establishes research-packet authority for Nightwatch PR #427: the postmerge terminal receipt confirming all 7 production publication bypass routes in Aperk357/Faceless-Video enforce RightsAndConsentV2 after PR #69 merge.",
+    "statement": "Records historical Faceless-Video enforcement evidence only: the postmerge technical facts confirming all 7 production publication bypass routes enforce RightsAndConsentV2 after PR #69 merge. This packet does NOT establish authority for Nightwatch PR #427 to proceed. Nightwatch #427 is BLOCKED_PENDING_-002_RECONCILIATION: because PR #69 was merged from the -001 lineage (declared unauthorized/superseded), fresh -002 authority must be established in a separate governed action before any subsequent governed mutations in this workstream may rely on this lineage. The enforcement facts recorded here are prospective evidence available to that reconciliation, not a grant of authority to consume them.",
+    "nw_427_status": "BLOCKED_PENDING_-002_RECONCILIATION",
     "limits": "Governs only projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json and this packet file. Does not modify any existing file.",
     "claim_refs": ["CL-1", "CL-2", "CL-3"]
   }
