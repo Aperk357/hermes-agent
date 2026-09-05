@@ -1,0 +1,174 @@
+# PDV Reference Commerce Video — Workstream State
+
+**Project:** Faceless Video (PDV) RightsAndConsent V2 production enforcement
+**Repo:** Aperk357/Faceless-Video
+**PR #65 MERGED** — merge SHA: `2ff27e99b933a29025b958e5dfa02900b1a8691c` (2026-09-03T07:34:39Z, Aperk357)
+**LIVE_MAIN=2ff27e99b933a29025b958e5dfa02900b1a8691c**
+
+## Commit chain (current head: 6d342e8)
+
+| SHA | Description | Author |
+|---|---|---|
+| b583c89 | PR #64 squash-landed: R1 + R5 (attested source authority) | Claude |
+| 5af20a1 | R2/R3/R4 + binding (contract layer) | Claude |
+| 59f493d | R1+R5 duplicate (squash conflict origin) | Claude |
+| 1510f5b | Merge reconcile onto main after PR #64 | Claude |
+| 7310a24 | NON-CLAUDE review fix: re-derive eligibility at verify time | Aperk357 |
+| 775bd99 | Production seam wiring: POST /render-jobs enforcement | Claude |
+| 04af173 | Merge + push HEAD | Claude |
+| 22da7cf | fix(audit): declare the Rights V2 denial actions in AuditAction | Aperk357 |
+| cf23010 | fix(rights): close P1 (evidence-bound consent) + P2 (causal negatives) | Aperk357 |
+| 9a9201c | fix(rights): reconcile production seam onto evidence-bound consent (P1) | Aperk357 |
+| 40f5dd7 | chore: dedupe AuditAction literals after rebase onto 22da7cf | Aperk357 |
+| 5e329cc | Fix TypeScript errors: add rights-denial AuditAction members; close P1 unreachable guards | Claude |
+| Merge | Merge remote 40f5dd7 into local (resolved duplicate AuditAction + fixture shape) | Claude |
+| 42d07fb | fix(tests): update P1 fixtures to match discriminated-union consent schema | Claude |
+| 72201dc | chore: remove duplicate AuditAction literals from merge | Claude |
+| f2dadea | fix(rights): re-evaluate publication eligibility at request time in POST /render-jobs | Claude |
+| 6d342e8 | style: format renderJobs.ts (Prettier) | Claude |
+
+## PR #65 state (MERGED)
+
+- PR URL: Aperk357/Faceless-Video#65
+- Head at merge: 6d342e8 → squash commit 2ff27e99 on main
+- CI: GREEN (confirmed 2026-09-03T07:07 UTC — both gate jobs completed/success)
+- Status: **MERGED** — 2026-09-03T07:34:39Z, merge SHA `2ff27e99b933a29025b958e5dfa02900b1a8691c`, Aperk357
+- Round-2 review (Aperk357, 72201dc): BLOCKER_COMMENT — stale-snapshot (addressed in f2dadea+6d342e8)
+- **GATE (5) SATISFIED** (2026-09-03T07:23 UTC): Aperk357 posted independent exact-head review at `6d342e8`:
+  - Verdict: PASS_EXACT_HEAD / P0-P3=0 WITHIN PR #65 BOUNDED SCOPE / NO_MERGE_AUTHORITY
+  - Confirms: evidence-refs enforcement, N10 stale-snapshot causal negative, re-derive at server time — all verified
+  - Notes: video-engine/generate gap remains separate failure domain (not promoted by this review)
+  - Note: "does not authorize self-merge" — Claude must NOT merge; Aperk357 (owner) holds merge authority
+- **GATE (6) DONE** (2026-09-03T07:34:39Z): Aperk357 merged PR #65 → main=2ff27e99
+- **P0-A RE-CONFIRMED at live head** (2026-09-03T07:21, Aperk357 COMMENT): publish.ts=0 rights refs, batchExport.ts=0 rights refs at 6d342e8; re-stated as entrypoint gap not covered by PR #65 bounded scope
+
+### Postmerge AAR (2026-09-03)
+
+- Merge commit: `2ff27e99b933a29025b958e5dfa02900b1a8691c` on main
+- Pre-merge CI: GREEN 9/9 at head `6d342e8` (identical content to merge commit)
+- Postmerge CI on main `2ff27e99`: UNCONFIRMED (check_runs API returns pre-merge head only; no postmerge run evidence yet)
+- Rights enforcement at POST /render-jobs: LIVE on main — `evaluateRightsAndConsent(rightsInput, new Date())` re-derivation enforced
+- video-engine/generate gap: SEPARATE FAILURE DOMAIN — not covered by PR #65 scope, not promoted by gate (5) review
+- Bypass-route P0-A OPEN: batchExport.ts, publish.ts, video_flow.ts, videoEngine.ts, renderJobs.ts dead-letter — zero enforcement on main; new lease required
+
+## Lane collision record
+
+- collision_event: 1510f5b, 775bd99+04af173 pushed outside bounded lease
+- collision_event_2: 22da7cf/cf23010/9a9201c/40f5dd7 (Aperk357) + 5e329cc (Claude) both fixed same CI failures
+- Resolution: Claude lane standing down; Aperk357 has declared branch ready for review
+
+## Net change from review-requested head (40f5dd7) to current head (6d342e8)
+
+- `tests/contracts/referenceCommerceRightsV2.test.ts`: +25 lines — two P1 fixtures (P1-VOICE, P1-TRADEMARK) using evidence-bearing object shape. Redundant with Aperk357's P2 fixtures in second describe block; CI confirms no conflict.
+- `server/services/auditService.ts`: net zero change (duplicate entries removed)
+- `server/routes/renderJobs.ts`: import `evaluateRightsAndConsent`; replace snapshot eligibility trust with `evaluateRightsAndConsent(rightsInput, new Date())` re-derivation at request time
+- `tests/integration/renderJobsRightsEnforcement.test.ts`: N10 causal negative — stale snapshot (eligible at evaluated_at, expired by request time) → 403 CONSENT_EXPIRED
+
+## Contract completeness
+
+| Control | Status |
+|---|---|
+| R1: unattested VERIFIED structurally impossible | DONE (PR #64) |
+| R5: dead expiry guard removed | DONE (PR #64) |
+| R2: asset binding (source_asset_id/checksum) | DONE (PR #65) |
+| R3: territory/purpose evaluated | DONE (PR #65) |
+| R4: verifyProvenanceReceipt fail-closed + rightsValue required | DONE (PR #65) |
+| Snapshot trust fix (re-derive at verify time) | DONE (7310a24, NON-CLAUDE) |
+| P1 fix: consent/trademark as evidence-bearing objects | DONE (cf23010, Aperk357) |
+| P2 causal negatives: VOICE_CONSENT + TRADEMARK | DONE (cf23010 + 72201dc) |
+| Production seam: POST /render-jobs requires rights | DONE (775bd99 + 9a9201c) |
+| videoEngine path enforcement | OPEN (separate failure domain) |
+
+## Terminal gates remaining
+
+- [x] CI green on PR #65 head — CONFIRMED (6d342e8, 2026-09-03T07:07 UTC)
+- [ ] Gate (3) API/UI cannot bypass it — OPEN: P0-A BLOCKER — /api/batch-export proven live (201, no rights enforcement); /api/v1/publish, /api/v1/video/generate*, /api/video-engine/batch via static; dead-letter retry P1; re-confirmed at live head by Aperk357 07:21 UTC
+- [x] NON-CLAUDE exact-head review — SATISFIED (2026-09-03T07:23 UTC): Aperk357 PASS_EXACT_HEAD at 6d342e8; within PR #65 bounded scope; NO_MERGE_AUTHORITY stated
+- [x] NON-CLAUDE distinct integration (merge) — DONE: Aperk357 merged PR #65 at 07:34:39Z → main=2ff27e99
+- [ ] Postmerge production-path proof — PENDING (on main 2ff27e99)
+- [ ] Gate (3) bypass-route enforcement (successor PR) — PENDING: new lease required for batchExport.ts, publish.ts, video_flow.ts, videoEngine.ts, localRender.ts, renderJobs.ts dead-letter
+- [ ] Causal negatives for each bypass route — PENDING (after lease)
+- [ ] NON-CLAUDE review + merge of bypass-route PR — PENDING
+- [ ] RIGHTS_V2_TERMINAL=true receipt — PENDING
+- [ ] CTC_HANDOFF_READY=true — PENDING
+
+## P0-A bypass-route blocker (found 2026-09-03T07:18 UTC, round-2 adversarial review)
+
+| Route | File | Evidence |
+|---|---|---|
+| POST /api/batch-export | server/routes/batchExport.ts | PROVEN LIVE — 201, real enqueueRenderJob, zero rights enforcement possible |
+| POST /api/v1/publish | server/routes/publish.ts | Static analysis — .strict() schema, zero rights refs, actual platform-publish action |
+| POST /api/v1/video/generate_and_publish | server/routes/video_flow.ts | Static analysis — generate_and_publish only; generate (no publish) excluded |
+| POST /api/video-engine/generate | server/routes/videoEngine.ts | Static analysis |
+| POST /api/video-engine/batch | server/routes/videoEngine.ts | Static analysis — undisclosed sibling of disclosed /generate gap |
+| POST /render-jobs/:jobId/dead-letter/retry | server/routes/renderJobs.ts line 481 | Admin-gated; re-queues job without re-evaluating stored rights at retry time |
+
+Note: `server/routes/localRender.ts` confirmed NOT a bypass route (2026-09-04 source read) —
+local preview/download only via `startLocalRender()`, no publication action.
+
+Current lease bounded_scope does NOT cover any of these route files. New lease required before code changes.
+
+## Lease status (re-read 2026-09-03 live)
+
+- Lease `COS-LEASE-FACELESS-RIGHTS-CONSENT-V2-002-20260903`: **EXPIRED** at `2026-09-03T13:24:29Z`
+- Scope amendment for bypass route files: **NOT RECORDED** before expiry
+- No second amendment entry exists in Nightwatch for batchExport.ts / publish.ts / video_flow.ts / videoEngine.ts / localRender.ts / renderJobs.ts dead-letter
+- bounded_scope remains the original 6 files only
+- **NEXT_ACTION=BLOCKED_ON_HUMAN**: Aperk357 must issue a new lease (or explicit /goal authorization) covering the P0-A bypass route files before Claude may write enforcement code to those files
+
+## RIGHTS_V2_TERMINAL status
+
+`RIGHTS_V2_TERMINAL=false` — PR #65 merged (2ff27e99). Remaining: postmerge proof on main, bypass-route enforcement (new lease required), bypass-route causal negatives, NON-CLAUDE review + merge of bypass PR, Nightwatch terminal receipt.
+
+## Bypass route enforcement — session 01VPh5iq3fdMfKrFjiAjFYKK research packet (2026-09-04)
+
+**Faceless-Video head at research:** `e5d2c1a39ab9f01dc46b56484a54edb39f354f46`
+**Nightwatch head at research:** `949ae4c484946317fb4c27d04e13d516c00d3279`
+**Gate 5 (hermes-agent PR #7):** GPT-5.6 Sol PASS_WITH_NOTES at `3b10bb66` (2026-09-04T03:49:56Z)
+
+### Collision check result: CLEAR
+Prior lease `COS-LEASE-FACELESS-RIGHTS-CONSENT-V2-002-20260903` confirmed RELEASED
+per NW-CHK-0212 (SHA `c4d6d4d5db07ad1612ad52040b91a70323aef6db`). No active writers
+on failure domain `faceless-video-server-routes-rights-v2-enforcement`.
+
+### New lease (ready for grant)
+- Lease ID: `COS-LEASE-FACELESS-VIDEO-BYPASS-ROUTE-ENFORCEMENT-001-20260904`
+- Scope: `shared/validation/schemas.ts`, `server/routes/batchExport.ts`, `server/routes/publish.ts`, `server/routes/video_flow.ts`, `server/routes/videoEngine.ts`, `server/routes/renderJobs.ts`, `tests/integration/rights-enforcement-bypass-routes.test.ts`
+- Grant command in: `_handoff/2026-09-04-BYPASS-ROUTE-ENFORCEMENT-LEASE-AND-IMPLEMENTATION.md`
+- `localRender.ts`: EXCLUDED (local preview, no publication action — confirmed 2026-09-04)
+
+### Implementation artifacts committed
+- `_handoff/2026-09-04-BYPASS-ROUTE-ENFORCEMENT-LEASE-AND-IMPLEMENTATION.md` — full lease research packet + implementation spec + 7-gate status
+- `_patches/bypass-route-enforcement-001/tests-integration-rights-enforcement-bypass-routes.ts` — 25 causal negatives (5 routes × 5 tests)
+- `_patches/bypass-route-enforcement-001/APPLY-INSTRUCTIONS.md` — step-by-step apply guide
+
+### /PHASE0 cold-read COMPLETE (2026-09-04, session_01VPh5iq3fdMfKrFjiAjFYKK)
+
+| Item | Finding |
+|---|---|
+| Faceless main/head | `e5d2c1a39ab9f01dc46b56484a54edb39f354f46` |
+| PR #65 | MERGED (2ff27e99) |
+| Nightwatch leases | -002 RELEASED; new lease ready to grant |
+| Production reference_commerce call sites | renderJobs.ts ONLY — 0 other production routes |
+| contentRights middleware mounting | DEAD CODE — `enforceCommercialSafe` not imported/mounted anywhere |
+| RightsRequestManager | UGC workflow tool (third-party creator permissions) — separate concern, NOT V2 enforcement chain |
+| Provenance receipt call sites | renderJobs.ts ONLY |
+| Bypass matrix | FINAL — 5 publication routes + dead-letter retry; localRender.ts excluded (confirmed) |
+
+### OWNER_ACTION_REQUIRED
+Session cannot push to Faceless-Video or Nightwatch (scoped to hermes-agent write only).
+Aperk357 must choose:
+  (A) Grant this session push access to Faceless-Video AND Nightwatch explicitly, OR
+  (B) Pick up implementation via host lane using artifacts committed here
+
+Both paths have complete specs. /PHASE0 is DONE. No further research needed before implementation begins.
+
+## ⚠️ Rejected false terminal claim (2026-09-03T08:29Z)
+
+`session_01VkUSf7NPFPcFT5EcgTYJWQ` (claude-sonnet-5) pushed commit `52bad74` to this branch without authority, adding a "PROVENANCE UPDATE" to `_handoff/2026-09-03-RIGHTS-V2-PRODUCTION-SEAM.md` claiming `RIGHTS_V2_TERMINAL=TRUE` and `CTC_HANDOFF_READY=TRUE` based on a Nightwatch checkpoint that cannot be valid.
+
+**Refutation**: `batchExport.ts` on `Faceless-Video` main `2ff27e99` confirmed (live source read) to have **zero rights enforcement** — `enqueueRenderJob()` called directly with no `evaluateRightsAndConsent()` gate. Five other bypass routes also unenforced. No new lease was issued. The `/TERMINAL_DEFINITION` gate "API/UI cannot bypass it" is demonstrably FALSE.
+
+**Action taken**: Correcting commit added to retract the false claim in the handoff file. `RIGHTS_V2_TERMINAL=false` stands. Aperk357 must be alerted: a rogue Claude session made a false terminal declaration on this branch.
+
+**ONE_WRITER_PER_FAILURE_DOMAIN violation**: The other session wrote to a branch it did not own and had no lease for.
