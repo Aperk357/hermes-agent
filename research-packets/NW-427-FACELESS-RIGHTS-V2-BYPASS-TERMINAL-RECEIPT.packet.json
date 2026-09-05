@@ -32,14 +32,21 @@
     {"option": "Keep circular binding (source_asset_id derived from rights_record itself).", "reason": "Tautological: verifyJobRightsBinding becomes a self-comparison. BLOCKER identified at 48e32776, fixed at 11744ee.", "claim_refs": ["CL-2"]}
   ],
   "testable_invariants": [
-    {"id": "INV-1", "statement": "Faceless-Video main contains merge commit 5106447fc13cd233d1942b9564982b08a8a91ac5; git log verifies PR #69 head 04328031 in ancestry.", "test_id": "test_nc7_hand_forged_registry_row_is_detected_as_not_replay_derived", "claim_refs": ["CL-3"]},
-    {"id": "INV-2", "statement": "All 7 bypass route handler files on Faceless-Video main call evaluateRightsAndConsent (batchExport, publish, video_flow, videoEngine x2, renderJobs, facebook).", "test_id": "test_nc8_projector_refuses_to_publish_a_queue_from_a_forged_registry", "claim_refs": ["CL-1"]},
-    {"id": "INV-3", "statement": "POST /api/batch-export with mismatched source_asset_id returns HTTP 403 JOB_ASSET_ID_MISMATCH, proven by CI N4 tests at 04328031.", "test_id": "test_nc4_generic_field_update_cannot_forge_a_release_to_admit", "claim_refs": ["CL-1"]}
+    {"id": "INV-1", "statement": "Faceless-Video main contains merge commit 5106447fc13cd233d1942b9564982b08a8a91ac5; git log verifies PR #69 head 04328031 in ancestry.", "faceless_ci_ref": "SRC-3/CL-3", "claim_refs": ["CL-3"]},
+    {"id": "INV-2", "statement": "All 7 bypass route handler files on Faceless-Video main call evaluateRightsAndConsent (batchExport, publish, video_flow, videoEngine x2, renderJobs, facebook).", "faceless_ci_ref": "SRC-1/CL-1", "claim_refs": ["CL-1"]},
+    {"id": "INV-3", "statement": "POST /api/batch-export with mismatched source_asset_id returns HTTP 403 JOB_ASSET_ID_MISMATCH, proven by Faceless-Video CI N4 tests at 04328031.", "faceless_ci_ref": "SRC-1/CL-1", "claim_refs": ["CL-1"]}
   ],
   "negative_tests": [
-    {"id": "NEG-1", "mutation": "Supply source_asset_id differing from rights_record.source_asset_id on POST /api/batch-export.", "expected": "BLOCK", "test_id": "test_nc4_generic_field_update_cannot_forge_a_release_to_admit"},
-    {"id": "NEG-2", "mutation": "Omit body source_asset_id field entirely on a route enforcing RightsAndConsentV2Schema.", "expected": "BLOCK", "test_id": "test_nc3_generic_field_update_cannot_forge_a_held_lease_to_fence"}
+    {"id": "NEG-1", "mutation": "Supply source_asset_id differing from rights_record.source_asset_id on POST /api/batch-export.", "expected": "BLOCK", "faceless_ci_ref": "SRC-1/CL-1"},
+    {"id": "NEG-2", "mutation": "Omit body source_asset_id field entirely on a route enforcing RightsAndConsentV2Schema.", "expected": "BLOCK", "faceless_ci_ref": "SRC-1/CL-1"}
   ],
+  "test_binding_note": "test_ids previously cited hermes-agent internal SessionDB/dict tests (test_nc3/nc4/nc7/nc8) which do not exercise Faceless route/ancestry/HTTP invariants. Those test_ids have been removed. Invariants are evidenced by Faceless-Video CI at PR #69 head 04328031 (SRC-1) and ancestry verification (SRC-3). The hermes-agent negative controls in tests/test_derived_authority_negative_controls.py remain valid for hermes-agent internal behavior only.",
+  "lineage_disclosure": {
+    "pr_69_branch_lineage": "-001",
+    "lineage_status": "declared_unauthorized_superseded_by_spec",
+    "reconciliation": "prospective_only",
+    "note": "Faceless-Video PR #69 was merged from a branch in the -001 authority lineage, which the successor spec declares unauthorized/superseded requiring fresh -002 authority. The enforcement facts in this packet (CI, independent review, ancestry) are prospective and accurate as of the merge timestamp. No retroactive re-labeling of the -001 lineage is made. Fresh -002 authority is required before any subsequent governed mutations in this workstream may rely on this lineage."
+  },
   "rollback": "Revert this research packet file and projects/PDV-CONTROL-TOWER/receipts/rights-v2-terminal-receipt-20260905.json from Nightwatch main. Faceless-Video main is unaffected. To roll back enforcement: revert PR #69 on Faceless-Video.",
   "research_status": {"research_completed_at": "2026-09-05T06:39:59Z", "first_governed_mutation_at": "2026-09-05T06:40:00Z"},
   "authorship": {"author_actor": "claude-sonnet-4-6", "author_session": "hermes-agent-8a81700b-aac7-5ec4-a3c9-4364ca6aa335", "author_github_login": "Aperk357"},

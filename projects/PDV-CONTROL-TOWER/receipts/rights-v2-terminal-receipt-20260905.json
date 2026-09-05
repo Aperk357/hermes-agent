@@ -50,12 +50,18 @@
     "gate_4_videoEngine_generate": "CLOSED",
     "gate_5_videoEngine_batch": "CLOSED",
     "gate_6_renderJobs_dead_letter": "CLOSED",
-    "gate_7_nightwatch_receipt_on_main": "PENDING_MERGE"
+    "gate_7_nightwatch_receipt_on_main": "PENDING_NW427"
   },
   "terminal_state": {
     "RIGHTS_V2_TERMINAL": "pending",
     "CTC_HANDOFF_READY": "pending",
-    "note": "RIGHTS_V2_TERMINAL and Gate 7 become true only upon merge of governance PR Aperk357/hermes-agent#7 to hermes-agent main and postmerge cold-read verification confirming this file on main."
+    "note": "This PR (hermes-agent#7) is a carrier/handoff document only. Merging it to hermes-agent main does NOT close Gate 7. Gate 7 ('nightwatch_receipt_on_main') is closed only upon completion of Nightwatch #427 as a separate governed action. RIGHTS_V2_TERMINAL and CTC_HANDOFF_READY become true only after Nightwatch #427 completes and postmerge cold-read confirms the receipt on Nightwatch main."
+  },
+  "lineage_disclosure": {
+    "pr_69_branch_lineage": "-001",
+    "lineage_status": "declared_unauthorized_superseded_by_spec",
+    "reconciliation": "prospective_only",
+    "note": "Faceless-Video PR #69 was merged from a branch in the -001 authority lineage, which the successor spec declares unauthorized/superseded requiring fresh -002 authority. The enforcement facts recorded here (routes on Faceless-Video main, CI, independent review) are prospective and accurate as of the merge timestamp. No retroactive re-labeling of the -001 lineage is made. Fresh -002 authority is required before any subsequent governed mutations in this workstream may rely on this lineage."
   },
   "rollback": "Revert this file and research-packets/NW-427-FACELESS-RIGHTS-V2-BYPASS-TERMINAL-RECEIPT.packet.json from hermes-agent main. Faceless-Video main is unaffected. To roll back enforcement: revert Faceless-Video PR #69."
 }
