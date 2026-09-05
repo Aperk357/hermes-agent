@@ -1,0 +1,61 @@
+{
+  "receipt_id": "rights-v2-terminal-receipt-20260905",
+  "schema_version": "1.0.0",
+  "governance_work_id": "NW-427-FACELESS-RIGHTS-V2-BYPASS-TERMINAL-RECEIPT",
+  "governance_pr": "Aperk357/hermes-agent#7",
+  "product_pr": "Aperk357/Faceless-Video#69",
+  "status": "pending_merge",
+  "recorded_at": "2026-09-05T06:40:00Z",
+  "product_facts": {
+    "faceless_video_repo": "Aperk357/Faceless-Video",
+    "faceless_video_main_head": "5106447fc13cd233d1942b9564982b08a8a91ac5",
+    "pr_69_head_commit": "04328031f67ffe67faac69502cb194d009238c66",
+    "pr_69_merge_timestamp": "2026-09-05T06:36:17Z",
+    "bypass_routes_enforcing_v2": 7,
+    "routes": [
+      "POST /api/batch-export (batchExport.ts)",
+      "POST /api/v1/publish (publish.ts)",
+      "POST /api/v1/video/generate_and_publish (video_flow.ts)",
+      "POST /api/video-engine/generate (videoEngine.ts)",
+      "POST /api/video-engine/batch (videoEngine.ts)",
+      "POST /render-jobs/:jobId/dead-letter/retry (renderJobs.ts)",
+      "POST /api/v1/facebook/generate_and_publish (facebook.ts)"
+    ],
+    "enforcement_mechanism": "evaluateRightsAndConsent + verifyJobRightsBinding (non-circular, source_asset_id from request body)",
+    "contract": "RightsAndConsentV2 (shared/contracts/reference_commerce.v2.ts, PR #65, merged 2026-09-03 as 2ff27e99)",
+    "ci_at_pr_69_head": {
+      "run_id": "PR #69 CI check_runs",
+      "conclusion": "9/9 GREEN",
+      "timestamp": "2026-09-04T11:15:32Z"
+    },
+    "independent_review": {
+      "reviewer": "GPT-5.6 Sol",
+      "review_id": "5113543076",
+      "url": "https://github.com/Aperk357/Faceless-Video/pull/69#pullrequestreview-5113543076",
+      "conclusion": "PASS_WITH_NOTES",
+      "timestamp": "2026-09-04T13:31:22Z",
+      "exact_head_commit": "04328031f67ffe67faac69502cb194d009238c66"
+    },
+    "integration_tests": {
+      "count": 35,
+      "file": "tests/integration/rights-enforcement-bypass-routes.test.ts",
+      "n4_negative_controls": true,
+      "fixture_tests": 130
+    }
+  },
+  "gates": {
+    "gate_1_batchExport": "CLOSED",
+    "gate_2_publish": "CLOSED",
+    "gate_3_video_flow": "CLOSED",
+    "gate_4_videoEngine_generate": "CLOSED",
+    "gate_5_videoEngine_batch": "CLOSED",
+    "gate_6_renderJobs_dead_letter": "CLOSED",
+    "gate_7_nightwatch_receipt_on_main": "PENDING_MERGE"
+  },
+  "terminal_state": {
+    "RIGHTS_V2_TERMINAL": "pending",
+    "CTC_HANDOFF_READY": "pending",
+    "note": "RIGHTS_V2_TERMINAL and Gate 7 become true only upon merge of governance PR Aperk357/hermes-agent#7 to hermes-agent main and postmerge cold-read verification confirming this file on main."
+  },
+  "rollback": "Revert this file and research-packets/NW-427-FACELESS-RIGHTS-V2-BYPASS-TERMINAL-RECEIPT.packet.json from hermes-agent main. Faceless-Video main is unaffected. To roll back enforcement: revert Faceless-Video PR #69."
+}
