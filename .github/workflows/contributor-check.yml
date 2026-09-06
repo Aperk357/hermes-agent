@@ -24,8 +24,25 @@ jobs:
       - name: Check for unmapped contributor emails
         id: check-emails
         run: |
-          # Get the merge base between this PR and main
-          MERGE_BASE=$(git merge-base origin/main HEAD)
+          # Compare against the PR's ACTUAL base, not origin/main. On a fork whose
+          # default branch has diverged from the branch a PR targets, merging-base
+          # against origin/main walks back to the last common ancestor of two
+          # unrelated lines and sweeps in every author in between, none of whom are
+          # this PR's contributors. The PR's own base sha is the correct parent.
+          #
+          # Fall back to origin/main only when that sha is genuinely unusable: a
+          # non-pull_request event supplies nothing, and a base sha can be
+          # unresolvable locally (force-pushed or GC'd base). The fallback keeps the
+          # previous behaviour rather than silently checking nothing.
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -n "$BASE_SHA" ] && git rev-parse --verify --quiet "${BASE_SHA}^{commit}" >/dev/null; then
+            BASE_REF="$BASE_SHA"
+          else
+            BASE_REF="origin/main"
+            echo "PR base sha unavailable or unresolvable; falling back to origin/main"
+          fi
+          MERGE_BASE=$(git merge-base "$BASE_REF" HEAD)
+          echo "Comparing against ${BASE_REF} (merge-base ${MERGE_BASE})"
 
           # Find any new author emails in this PR's commits
           NEW_EMAILS=$(git log ${MERGE_BASE}..HEAD --format='%ae' --no-merges | sort -u)
