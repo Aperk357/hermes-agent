@@ -47,6 +47,10 @@ class TurnRetryState:
     # A fallback activation (incl. content-filter stream stalls) rolled partial content
     # off ``messages``; re-issue the call against the new provider.
     restart_with_rebuilt_messages: bool = False
+    # As above, but the attempt DID produce a valid, billed assistant response — the
+    # output ceiling was reached, not a stall. The iteration must therefore NOT be
+    # refunded: the provider call happened and the tokens were paid for.
+    restart_on_fallback_after_valid_output: bool = False
     # A user correction cancelled the in-flight request: append a role-safe checkpoint +
     # user message, rebuild the payload, and retry the same logical iteration.
     restart_with_redirected_messages: bool = False

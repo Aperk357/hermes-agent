@@ -34,6 +34,7 @@ class FailoverReason(enum.Enum):
     timeout = "timeout"                  # Connection/read timeout — rebuild client + retry
     ssl_cert_verification = "ssl_cert_verification"  # Deterministic TLS chain failure — fail fast with guidance
     context_overflow = "context_overflow"  # Context too large — compress, not failover
+    output_ceiling = "output_ceiling"    # Continuation budget spent on finish_reason=length — the response was valid and billed, so no refund
     payload_too_large = "payload_too_large"  # 413 — compress payload
     image_too_large = "image_too_large"   # Native image part exceeds provider's per-image limit — shrink and retry
     image_corrupt = "image_corrupt"       # Provider can't decode image bytes — strip and retry (shrinking won't help)
