@@ -242,7 +242,15 @@ def _continue_text(st: _Trunc, _retry: TurnRetryState, assistant_message: Any) -
            else "no visible text was produced."),
         force=True,
     )
+    # Decided BEFORE the trail is dropped: a fallback that cannot see the prefix would
+    # start the answer over, and the finalizer would then stitch it twice.
+    verdict = _length_exhaustion_fallback(st, _retry)
+    if verdict is not None:
+        agent._session_messages = messages
+        return verdict
     # Unanswered continue nudges made every later turn re-truncate: drop the trail.
+    # Only on the give-up path — on failover the last nudge IS answered, by the
+    # fallback provider.
     idx = st.current_turn_user_idx
     _turn_start = idx + 1 if isinstance(idx, int) and idx >= 0 else 0
     messages[_turn_start:] = [
@@ -260,6 +268,66 @@ def _continue_text(st: _Trunc, _retry: TurnRetryState, assistant_message: Any) -
         partial_response or _CEILING_NO_TEXT,
         "Response remained truncated after 4 continuation attempts",
     )
+
+
+def _length_exhaustion_fallback(st: _Trunc, _retry: TurnRetryState) -> Optional[TruncationVerdict]:
+    """Continuation budget exhausted → governed failover, mirroring
+    ``_content_filter_fallback``. ``try_activate_fallback`` stays the sole route-selection
+    authority; this only decides *when* to ask it.
+
+    Unlike the content-filter case the accumulated text is good — already paid for and
+    not poisoned — so nothing is rolled back or discarded. The fragment/nudge trail is
+    kept, exactly as the successful-continuation path keeps it, for three reasons:
+
+    * the fallback provider must SEE the prefix, or it restarts the answer and the
+      finalizer's join then emits it twice;
+    * the trail already alternates (fragment, nudge, fragment, nudge), and appending the
+      one nudge this ceiling attempt skipped keeps the fallback's reply following a user
+      row rather than a second assistant row;
+    * ``finish_text_response`` collapses those rows into the joined answer on recovery,
+      so the persisted transcript reconstructs the whole response — prefix included — and
+      a reload sees exactly what the caller was returned.
+
+    ``truncated_response_parts`` is likewise untouched: it is what that same finalizer
+    joins ahead of the fallback's text to build ``final_response``."""
+    agent = st.agent
+    if not agent._has_pending_fallback():
+        return None
+    agent._emit_status("Output ceiling reached; switching to fallback...")
+    if not agent._try_activate_fallback(FailoverReason.output_ceiling):
+        agent._vprint(
+            f"{agent.log_prefix}⚠️  Fallback provider unavailable — keeping the partial response.",
+            force=True,
+        )
+        return None
+    agent._vprint(
+        f"{agent.log_prefix}↻ Output ceiling reached — continuing on the fallback provider...",
+        force=True,
+    )
+    # This ceiling attempt appended its fragment but skipped the nudge (n == 4). Add it,
+    # so the fallback is asked to CONTINUE the prefix it can now see — not to restart —
+    # and so its reply follows a user row.
+    from agent.conversation_loop import _get_continuation_prompt
+
+    append_message(st.messages, {
+        "role": "user",
+        "content": _get_continuation_prompt(
+            st.is_stub, getattr(st.response, "_dropped_tool_names", None)
+        ),
+        "_length_continuation_nudge": True,
+    })
+    # A fresh continuation budget for the new provider. This is a per-provider
+    # allowance, not accounting: ``retry_count`` and ``compression_attempts`` are
+    # deliberately NOT reset, because the attempt that hit the ceiling really
+    # happened and its budget was really spent.
+    st.length_continue_retries = 0
+    _retry.primary_recovery_attempted = False
+    # Must NOT re-enter the continuation path: the budget is what was exhausted.
+    _retry.restart_with_length_continuation = False
+    # NOT ``restart_with_rebuilt_messages`` — that one refunds the iteration, which
+    # would be wrong here: the ceiling response was valid output and was billed.
+    _retry.restart_on_fallback_after_valid_output = True
+    return st.done("break")
 
 
 def _retry_truncated_tool_call(st: _Trunc, api_kwargs: Any) -> TruncationVerdict:

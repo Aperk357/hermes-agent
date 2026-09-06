@@ -378,6 +378,15 @@ def apply_retry_restarts(
         _preflight_compression_blocked = False
         return _verdict("continue")
 
+    if _retry.restart_on_fallback_after_valid_output:
+        # Output-ceiling failover: the attempt produced a valid, billed assistant
+        # response, so — unlike every refunding restart above — the iteration count
+        # and the iteration budget stand. Only the preflight block is cleared, for
+        # the same reason as ``restart_with_rebuilt_messages``.
+        _retry.restart_on_fallback_after_valid_output = False
+        _preflight_compression_blocked = False
+        return _verdict("continue")
+
     if _retry.restart_with_length_continuation:
         # Boost output budget per retry: 2×, 4×, 8×, 16× base, capped at 32 768, via
         # _ephemeral_max_output_tokens. Keep a larger original provider/model
