@@ -22,7 +22,12 @@ jobs:
     # 82s). A second slice divides work that is already at that floor, and
     # adds a second setup.
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 30 was sized for the 96-core runner, where this suite takes 126s. On a
+    # standard 4-core runner it reached 86.9% (34272/~39445) in 30 minutes
+    # (run 34029041909), which projects to ~34.5 minutes. 45 clears that with
+    # ~30% margin for runner variance without becoming a place slow tests can
+    # hide. Nothing about the test selection changed.
+    timeout-minutes: 45
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
