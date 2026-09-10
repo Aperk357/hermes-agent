@@ -469,6 +469,14 @@ def apply_retry_restarts(
         current_turn_user_idx = _reanchor(agent, messages, user_message)
         return _verdict("continue")
 
+    if _retry.restart_on_fallback_after_valid_output:
+        # Unlike transport/content-filter stalls, an output-ceiling attempt returned
+        # valid, billable text. Reissue against the governed fallback without refunding
+        # the API-call or iteration budgets and without resetting retry/compression state.
+        _retry.restart_on_fallback_after_valid_output = False
+        _preflight_compression_blocked = False
+        return _verdict("continue")
+
     if _retry.restart_with_rebuilt_messages:
         restart_count += 1
         if restart_count > max_retries:
