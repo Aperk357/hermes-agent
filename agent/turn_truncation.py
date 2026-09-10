@@ -234,7 +234,9 @@ def _content_filter_fallback(st: _Trunc, _retry: TurnRetryState) -> Optional[Tru
 
 def _continue_text(st: _Trunc, _retry: TurnRetryState, assistant_message: Any) -> TruncationVerdict:
     """Text truncation (no tool calls): append the fragment + a continuation nudge (up to
-    4), then the ceiling exit that drops the fragment trail and keeps the stitched partial.
+    4), then consult the governed fallback chain for a true output ceiling. A prompt-full
+    response still terminates truthfully without failover. If activation is unavailable,
+    the ceiling exit drops the fragment trail and keeps the stitched partial.
     Never appends an interim assistant row with NO visible content — strict providers
     reject it with 400 — only the nudge."""
     from agent.conversation_loop import _get_continuation_prompt, _join_truncated_parts
@@ -284,6 +286,10 @@ def _continue_text(st: _Trunc, _retry: TurnRetryState, assistant_message: Any) -
            else "no visible text was produced."),
         force=True,
     )
+    if filled is None:
+        verdict = _length_exhaustion_fallback(st, _retry)
+        if verdict is not None:
+            return verdict
     # Unanswered continue nudges made every later turn re-truncate: drop the trail.
     idx = st.current_turn_user_idx
     _turn_start = idx + 1 if isinstance(idx, int) and idx >= 0 else 0
@@ -308,6 +314,41 @@ def _continue_text(st: _Trunc, _retry: TurnRetryState, assistant_message: Any) -
         partial_response or _CEILING_NO_TEXT,
         "Response remained truncated after 4 continuation attempts",
     )
+
+
+def _length_exhaustion_fallback(
+    st: _Trunc, _retry: TurnRetryState,
+) -> Optional[TruncationVerdict]:
+    """Activate the governed fallback after a true output-ceiling exhaustion.
+
+    The already-paid fragments and continuation nudges stay append-only so the fallback
+    sees the exact prefix it must continue. The attempt produced valid output, therefore
+    this restart deliberately does not refund API-call/iteration accounting or reset
+    retry/compression counters.
+    """
+    from agent.conversation_loop import _get_continuation_prompt
+    from agent.error_classifier import FailoverReason
+
+    agent = st.agent
+    if not agent._has_pending_fallback():
+        return None
+    if not agent._try_activate_fallback(FailoverReason.output_ceiling):
+        return None
+
+    append_message(st.messages, {
+        "role": "user",
+        "content": _get_continuation_prompt(st.is_stub, None),
+        "_length_continuation_nudge": True,
+    })
+    agent._session_messages = st.messages
+    st.length_continue_retries = 0
+    _retry.restart_with_length_continuation = False
+    _retry.restart_on_fallback_after_valid_output = True
+    agent._vprint(
+        f"{agent.log_prefix}↻ Output ceiling exhausted — continuing with governed fallback...",
+        force=True,
+    )
+    return st.done("break")
 
 
 def _retry_truncated_tool_call(st: _Trunc, api_kwargs: Any) -> TruncationVerdict:
