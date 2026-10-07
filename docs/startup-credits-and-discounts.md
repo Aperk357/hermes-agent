@@ -7,7 +7,7 @@ an official page on the research date. Links were accessed 2026-09-05 unless a r
 Rows whose confidence column reads "Unverified", "Third-party", or "Semi-verified" have no primary-source
 confirmation and should be treated as leads, not facts. Re-check the linked page before relying on a number.
 
-**Reconciliation pass (2026-09-12):** re-verified the confirmed-subtotal programs and a sample of
+**Historical reconciliation pass (2026-09-12; superseded for PostHog and Twilio dates below):** re-verified the confirmed-subtotal programs and a sample of
 high-stakes rows against current official pages. Two corrections were made: the Twilio AI Startup
 Searchlight 2026 application window closed Sept 11, 2026 and is no longer actionable (see section 2f
 and the deadlines list); and the Microsoft for Startups $150K usage-based milestone does not require
@@ -16,6 +16,21 @@ an Investor Network partner, contrary to the prior text (see section 2b). Everyt
 matched current official text with no material drift. Arithmetic in every table was independently
 recomputed and is unchanged. This was not an exhaustive re-verification of all ~90 program rows;
 treat any row not called out here as still dated to the original 2026-09-05 research pass.
+
+**Date-sensitive refresh (2026-10-07):** checked the guide's explicit calendar dates and
+deadline wording, without re-researching the ~90-row catalog. PostHog's September 14 exclusion
+is now in effect: startup credits do not cover the listed AI tools; eligible pre-cutoff usage
+remains payable with credits. The $50K/12-month offer and under-2-years/under-$5M eligibility
+remain published. Twilio's current first-party timeline extends the 2026 deadline to September 25,
+which is also past; its selection and November announcement windows remain as stated. The
+September 12 note above records the historical pass, not current confirmation of those dates.
+NSF's November 4, 2026 and March 4, 2027 deadlines remain future dates and are confirmed by
+https://seedfund.nsf.gov/solicitation/ and https://www.nsf.gov/funding/opportunities/small-business-innovation-research-small-business-technology/nsf26-510/solicitation
+(accessed 2026-10-07). Other historical dates and activation-relative durations were retained;
+no other upcoming calendar claim was found that has become past since September 12. Totals
+were not changed or newly revalidated. This bounded refresh does not resolve other source drift
+or constitute an exhaustive current-source review. The PR remains draft; unchanged rows retain
+their original verification dates and any stated uncertainties.
 
 ## 1. Headline numbers
 
@@ -149,7 +164,7 @@ match your compute ramp instead of claiming everything on day one.
 | Discord API | Free; no cash startup program. Bot verification required past 100 servers | Anyone | https://discord.com/developers | Official |
 | Slack | 50% off first 3 mo of monthly Pro (<= 200 employees); 25–30% off 12 mo via Mercury/Brex/accelerator partners | See left | https://slack.com/partner-offers | Partly unverified |
 | Microsoft Teams / M365 | Free or discounted M365 Business Premium via Microsoft for Startups | Microsoft for Startups member | https://learn.microsoft.com/en-us/microsoft-for-startups/benefits | Official |
-| Twilio (SMS, WhatsApp Cloud) | No evergreen startup credits. **AI Startup Searchlight 2026 application window closed September 11, 2026** (confirmed as past at reconciliation on 2026-09-12); no longer actionable. Track 1 (10 honorees) up to $5K Twilio credits; Track 2 (20 honorees) up to $10K Twilio credits. Selection runs late September to late October 2026, with honorees announced mid-to-late November 2026. The landing page also lists up to $2,500 one-time OpenAI API credits per honoree, but Twilio's track summaries and prize FAQ conflict on this component, so treat it as **CONFIRMATION_REQUIRED** with Twilio if you are already an honoree | < $200M raised, built on Twilio; applications closed | https://www.twilio.com/en-us/lp/twilio-ai-startup-searchlight (accessed 2026-09-12) | Official; window closed |
+| Twilio (SMS, WhatsApp Cloud) | No evergreen startup credits. **AI Startup Searchlight 2026 application window closed September 25, 2026** (Twilio's current timeline extends the earlier September 11 deadline to September 25 at 11:45 pm PST; rechecked 2026-10-07); no longer actionable. Track 1 (10 honorees) up to $5K Twilio credits; Track 2 (20 honorees) up to $10K Twilio credits. Selection runs late September to late October 2026, with honorees announced mid-to-late November 2026. The landing page also lists up to $2,500 one-time OpenAI API credits per honoree, but Twilio's track summaries and prize FAQ conflict on this component, so treat it as **CONFIRMATION_REQUIRED** with Twilio if you are already an honoree | < $200M raised, built on Twilio; applications closed | https://www.twilio.com/en-us/lp/twilio-ai-startup-searchlight (deadline rechecked 2026-10-07) | Official; window closed |
 
 ### 2g. Dev tooling and workspace (GitHub, Notion, Airtable, observability, support)
 
@@ -159,7 +174,7 @@ match your compute ramp instead of claiming everything on day one.
 | GitHub Copilot Free / Actions | Copilot Free: 2,000 completions/mo. Actions: unlimited minutes on public repos; 2,000 min/mo private on Free | Anyone | No | https://github.com/features/copilot/plans | Official |
 | Notion for Startups | Business plan + Notion AI free: 6 mo via partner, 3 mo direct | New customer, < 100 employees | No (3 mo) | https://www.notion.com/startups | Official |
 | Airtable | No official startup page found; ~$500–$2,000 credits via perk platforms | | | https://airtable.com/pricing | Unverified |
-| PostHog for Startups | $50K credits, valid 12 months from application. Policy change with a future effective date: **from September 14, 2026**, credits can no longer be applied to PostHog AI tools (PostHog Desktop, Slack app, Replay Vision, PostHog AI, Inbox). Until that date credits still cover those tools, and usage incurred before the cut-off can still be paid with credits afterward | < 2 yrs old, < $5M raised, company-domain account | No | https://posthog.com/startups and https://posthog.com/handbook/marketing/startups | Official (2026-09-05) |
+| PostHog for Startups | $50K credits, valid 12 months from application. Policy now in effect: **since September 14, 2026**, credits cannot cover bills incurred on PostHog AI tools (PostHog Desktop, the PostHog Slack app, Replay Vision, PostHog AI, and Inbox). For startups that joined before September 14, usage incurred before the cut-off can still be paid with credits afterward | < 2 yrs old, < $5M raised, company-domain account | No | https://posthog.com/startups and https://posthog.com/handbook/marketing/startups (accessed 2026-10-07) | Official; date-sensitive policy refreshed 2026-10-07 |
 | Sentry for Startups | Up to $5,000 credits + priority support, 1 yr | Pre-seed to Series A | No | https://sentry.io/for/startups/ | Official |
 | Datadog for Startups | Up to $100,000 credits, 1 yr | <= Series A, new to Datadog | Yes | https://www.datadoghq.com/partner/datadog-for-startups/ | Official |
 | Segment Startup Program | **Unverified / likely inactive.** As of 2026-09-05 the program URL https://segment.com/startups/ redirects to Twilio's startups page (https://www.twilio.com/en-us/solutions/startups), which states Twilio does not offer additional startup credits. Older Segment docs still describe up to $25K in credits toward the Team plan for up to 2 years, but no current first-party terms page was found, so Segment is excluded from every total | Historical: incorporated < 24 mo, < $5M raised | n/a | https://www.twilio.com/en-us/solutions/startups and https://segment.com/docs/guides/usage-and-billing/discounts-for-startups-npos/ (accessed 2026-09-05) | Unverified; current intake not found |
@@ -216,7 +231,7 @@ match your compute ramp instead of claiming everything on day one.
 ## 3. Stacking order
 
 1. **Identity first (week 1).** Incorporate (Stripe Atlas costs $500 plus $100 per year for the registered agent after year one; the $2,500 Stripe credit is automatic for eligible companies incorporated on or after 2025-10-16 but only worth what you spend in eligible Stripe fees within a year, and the $5K AWS package depends on AWS Activate approval, so the $7.5K+ figure is a ceiling, not a guaranteed value). Open Mercury or Brex for banking; each advertises a $5K AWS package, but AWS does not publish how partner packages combine, so expect to use one channel. Join Carta Launch and YC Startup School. Use a domain-matched email everywhere.
-2. **Claim the no-referral tiers (weeks 1–2).** Microsoft for Startups ($5K Azure + M365), Cloudflare $10K, Daytona $10K, OpenRouter $5K, Anthropic community tier (community access only, no credits without institutional funding), Novita (only $1K upfront, rest is spend-matched), NVIDIA Inception (then Lambda $7.5K), Intel Liftoff, ElevenLabs grant, PostHog, Sentry, Retool, Intercom, Zendesk, Notion 3 mo, Miro $500, Vanta $1K. Vercel Open Source Program if you keep a genuinely maintained OSS repo. (Twilio AI Startup Searchlight's September 11, 2026 window has closed; watch for a 2027 cycle.)
+2. **Claim the no-referral tiers (weeks 1–2).** Microsoft for Startups ($5K Azure + M365), Cloudflare $10K, Daytona $10K, OpenRouter $5K, Anthropic community tier (community access only, no credits without institutional funding), Novita (only $1K upfront, rest is spend-matched), NVIDIA Inception (then Lambda $7.5K), Intel Liftoff, ElevenLabs grant, PostHog, Sentry, Retool, Intercom, Zendesk, Notion 3 mo, Miro $500, Vanta $1K. Vercel Open Source Program if you keep a genuinely maintained OSS repo. (Twilio AI Startup Searchlight's extended September 25, 2026 window has closed; check the official page for any future cycle.)
 3. **Hold Google Cloud Start if a check is coming.** The $2K Start tier counts against the under-$5K prior-credit limit for the $200K–$350K Scale/AI tier.
 4. **Understand the partner gates before applying for anything large.** Azure usage-based milestones reach $150K without a partner (see section 2b); only Azure's >$150K/$200K Investor Network tier, Google Scale/AI, AWS Portfolio, Anthropic credit tiers (credits available, amount unverified), Datadog $100K, Vercel $30K, GitHub $10K, Perplexity $5K, Linear, Atlassian, Zoom, and Figma each have their own partner or funding rules, and they differ. Google's Scale tier accepts equity investment (including SAFEs) only from institutional investors and VC firms; angel, friends-and-family, crowdfunding, grants, and prize money do not qualify. Vercel, GitHub, and Datadog require affiliation with their own approved partner lists regardless of how much you raised. Do not raise money, sign a SAFE, or take on equity or legal obligations in order to unlock credits; raise only when the business needs capital, then apply within 12 months of the round.
 5. **Stagger activations.** Most credits last 12 months. Activate Azure, then GCP, then AWS as your compute grows.
@@ -225,8 +240,8 @@ match your compute ramp instead of claiming everything on day one.
 
 ## 4. Deadlines and recent changes to know
 
-- Twilio AI Startup Searchlight's 2026 application window **closed Sept 11, 2026** (confirmed past as of this reconciliation on 2026-09-12); no action possible until a future cycle is announced.
-- PostHog: **from Sept 14, 2026**, startup credits stop covering PostHog AI tools. Before that date they still apply, and usage incurred before the cut-off remains payable with credits (https://posthog.com/handbook/marketing/startups).
+- Twilio AI Startup Searchlight's 2026 application window **closed Sept 25, 2026**, after an extension from Sept 11 (https://www.twilio.com/en-us/lp/twilio-ai-startup-searchlight, accessed 2026-10-07); applications are no longer actionable, and any future cycle needs its own announcement.
+- PostHog: **since Sept 14, 2026**, startup credits do not cover bills incurred on PostHog Desktop, the PostHog Slack app, Replay Vision, PostHog AI, or Inbox. For startups that joined before the cut-off, earlier usage remains payable with credits (https://posthog.com/startups and https://posthog.com/handbook/marketing/startups, accessed 2026-10-07).
 - Brave Search API free plan was removed in Feb 2026; a card is now required for the $5/mo credit.
 - Gemini API free tier disappears the moment billing is enabled on the project.
 - Microsoft for Startups dropped bundled OpenAI credits in July 2025; use Azure OpenAI from the Azure balance instead.
