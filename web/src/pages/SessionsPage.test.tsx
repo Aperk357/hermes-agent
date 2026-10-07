@@ -119,6 +119,10 @@ afterEach(async () => {
 });
 
 describe("SessionsPage per-row profile routing (#99387)", () => {
+  // 5s (the vitest default) is enough on a 32-core runner and not on a 4-core one:
+  // this case renders the page and drives several sequential per-row requests. The
+  // subject is which profile each request is routed to, not how fast it arrives, so
+  // the limit is raised for THIS test only -- the global testTimeout is untouched.
   it("sends every per-row request to the row's owning profile, not the management default", async () => {
     await renderSessionsPage([
       { id: "sid-guanli", profile: "guanli", source: "cli", model: null, title: "Managed", started_at: 1, ended_at: null,
@@ -150,5 +154,5 @@ describe("SessionsPage per-row profile routing (#99387)", () => {
     );
     await act(async () => click(confirm ?? null));
     expect(apiMocks.deleteSession).toHaveBeenCalledWith("sid-guanli", "guanli");
-  });
+  }, 15_000);
 });
